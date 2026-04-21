@@ -1,0 +1,8 @@
+.DS_Store
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+docs/.quarto/
+docs/_site/
+docs/analysis_files/

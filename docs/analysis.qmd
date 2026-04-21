@@ -1,0 +1,138 @@
+---
+title: "AlcHep — Analysis"
+date: today
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r setup}
+#| include: false
+library(tidyverse)
+library(readxl)
+library(tableone)
+library(survival)
+library(tidycmprsk)
+library(ggsurvfit)
+library(gtsummary)
+
+source(knitr::purl(
+  "/Users/to909/Desktop/Terlipressin projects/Terlipressin/code/shared_pipeline.qmd",
+  quiet = TRUE
+))
+```
+
+## Analysis Cohort
+
+`master` comes from the shared pipeline. The exposure is `etoh_hepatitis`; the competing-risk outcome is `time_to_death_90days_cmp` / `time_to_death_status_90days_cmp` (0 = censored, 1 = death, 2 = transplant).
+
+```{r cohort}
+#| code-fold: true
+#| code-summary: "Show cohort filter"
+analysis <- master %>%
+  filter(!is.na(etoh_hepatitis)) %>%
+  mutate(
+    etoh_hepatitis = factor(etoh_hepatitis, levels = c(0, 1), labels = c("Non-AH", "AH")),
+    event_cmp      = factor(time_to_death_status_90days_cmp,
+                            levels = c(0, 1, 2),
+                            labels = c("Censored", "Death", "Transplant"))
+  )
+```
+
+## Table 1 — Demographics by `etoh_hepatitis`
+
+Variable list taken from `Requests/AlcHep Data Request 04162026.docx`.
+
+```{r table1}
+#| code-fold: true
+#| code-summary: "Show Table 1 code"
+numerical_vars <- c(
+  "age", "scr_admit", "tbili_admit", "inr_admit", "sodium_admit",
+  "albumin_admit", "lactate_admit", "baseline_scr",
+  "scr_terli_day0", "bun_terli_day0", "ast_terli_day0", "alt_terli_day0",
+  "bili_terli_day0", "alb_terli_day0", "inr_terli_day0", "wbc_terli_day0",
+  "hgb_terli_day0"
+)
+
+categorical_vars <- c(
+  "admit_admitservice", "admit_admitroute", "sex_male", "race", "hispanic",
+  "cirrhosis_etiology", "hegrade_admit", "admit_ascites",
+  "htn_medical_hx", "dm_medical_hx", "ckd_medical_hx", "cad_medical_hx",
+  "nsbb_preadmission", "nsbb_type_preadmission", "diuretics_preadmission",
+  "nsaid_preadmission", "ace_arb_preadmission",
+  "ascites_previous_comp", "refascites_previous_comp", "he_previous_comp",
+  "sbp_previous_comp", "nonsbp_previous_comp", "phtn_bleed_previous_comp",
+  "hcc_previous_comp", "tips_previous_comp",
+  "he_terli_day0", "location_terli_day0", "terli_route_day0",
+  "akin", "ckd_baseline",
+  "time_to_death_status_90days_cmp", "hrs_responders_cat_2",
+  "HRS_reversal_new", "listed_transplant", "transplant_lt",
+  "any_ae", "disposition", "transplant_slkt"
+)
+
+numerical_vars   <- intersect(numerical_vars,   names(analysis))
+categorical_vars <- intersect(categorical_vars, names(analysis))
+all_vars         <- c(numerical_vars, categorical_vars)
+
+analysis <- analysis %>%
+  mutate(across(all_of(categorical_vars), as.factor),
+         across(all_of(numerical_vars),   as.numeric))
+
+create_table_one(
+  all_vars = all_vars,
+  cat_vars = categorical_vars,
+  data     = analysis,
+  strata   = "etoh_hepatitis",
+  output   = "/Users/to909/Desktop/Terlipressin projects/AlcHep/Results/Table1_etoh_hepatitis.csv"
+)
+```
+
+## Unadjusted Fine-Gray — 90-day mortality (AH vs. non-AH)
+
+```{r fg-unadj}
+#| code-fold: true
+#| code-summary: "Show unadjusted Fine-Gray"
+fg_unadj <- tidycmprsk::crr(
+  Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis,
+  data = analysis
+)
+
+fg_unadj %>% tbl_regression(exponentiate = TRUE)
+
+cuminc(Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis, data = analysis) %>%
+  ggcuminc(outcome = "Death") +
+  labs(x = "Days from admission", y = "Cumulative incidence of death") +
+  add_confidence_interval() +
+  add_risktable()
+```
+
+## Adjusted Fine-Gray — MELD 3.0 model
+
+Covariates: `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`.
+
+```{r fg-meld3}
+#| code-fold: true
+#| code-summary: "Show MELD 3.0 adjusted Fine-Gray"
+tidycmprsk::crr(
+  Surv(time_to_death_90days_cmp, event_cmp) ~
+    age + sex_male + hispanic + admit_meld_3 + etoh_hepatitis,
+  data = analysis
+) %>%
+  tbl_regression(exponentiate = TRUE)
+```
+
+## Adjusted Fine-Gray — ACLF grade model
+
+Covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`.
+
+```{r fg-aclf}
+#| code-fold: true
+#| code-summary: "Show ACLF-grade adjusted Fine-Gray"
+tidycmprsk::crr(
+  Surv(time_to_death_90days_cmp, event_cmp) ~
+    age + sex_male + hispanic + aclf_grade + etoh_hepatitis,
+  data = analysis
+) %>%
+  tbl_regression(exponentiate = TRUE)
+```

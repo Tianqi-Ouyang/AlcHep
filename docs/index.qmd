@@ -1,0 +1,29 @@
+---
+title: "AlcHep — Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin"
+date: last-modified
+---
+
+## Project Summary
+
+Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (AH) and non-AH patients treated with terlipressin for HRS-AKI, focusing on 90-day mortality as a competing risk against liver transplant.
+
+## Exposure
+
+- `etoh_hepatitis` — alcoholic hepatitis at admission (AH vs. non-AH)
+
+## Outcomes
+
+- **Primary:** 90-day cumulative incidence of death, with liver transplant as the competing event
+  - `time_to_death_90days_cmp`, `time_to_death_status_90days_cmp`
+- **Secondary / descriptive:** HRS response (`hrs_responders_cat_2`, `HRS_reversal_new`), transplant listing / receipt, adverse events, disposition
+
+## Analyses
+
+1. **Table 1** — Demographics and clinical characteristics stratified by `etoh_hepatitis`
+2. **Unadjusted Fine-Gray** — 90-day cumulative incidence of mortality (AH vs. non-AH)
+3. **Adjusted Fine-Gray (MELD 3.0)** — covariates: `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`
+4. **Adjusted Fine-Gray (ACLF)** — covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`
+
+## Data Request
+
+See `Requests/AlcHep Data Request 04162026.docx` for the current variable list.
