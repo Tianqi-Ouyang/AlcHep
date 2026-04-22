@@ -16,11 +16,62 @@ library(survival)
 library(tidycmprsk)
 library(ggsurvfit)
 library(gtsummary)
+library(riskRegression)
+library(prodlim)
 
 source(knitr::purl(
   "/Users/to909/Desktop/Terlipressin projects/Terlipressin/code/shared_pipeline.qmd",
   quiet = TRUE
 ))
+```
+
+```{r helpers}
+#| include: false
+# Predict adjusted CIF curves for AH vs non-AH from a riskRegression::FGR fit.
+# Continuous covariates are held at their median; factor covariates at their
+# modal level. The exposure variable is varied across its levels.
+adjusted_cif <- function(formula, data, exposure = "etoh_hepatitis",
+                         times = 0:90, cause = 1) {
+  fg <- riskRegression::FGR(formula, data = data, cause = cause)
+
+  covars <- setdiff(all.vars(formula)[-c(1, 2)], exposure)
+  profile <- lapply(covars, function(v) {
+    x <- data[[v]]
+    if (is.numeric(x)) {
+      median(x, na.rm = TRUE)
+    } else {
+      lvls <- levels(factor(x))
+      modal <- names(sort(table(x), decreasing = TRUE))[1]
+      factor(modal, levels = lvls)
+    }
+  })
+  names(profile) <- covars
+  profile[[exposure]] <- levels(data[[exposure]])
+  newdata <- do.call(expand.grid, c(profile, stringsAsFactors = FALSE))
+
+  risk <- riskRegression::predictRisk(fg, newdata = newdata, times = times)
+  colnames(risk) <- times
+
+  as.data.frame(risk) |>
+    dplyr::mutate(!!exposure := newdata[[exposure]]) |>
+    tidyr::pivot_longer(-dplyr::all_of(exposure),
+                        names_to = "time", values_to = "cif") |>
+    dplyr::mutate(time = as.numeric(time))
+}
+
+plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis", subtitle = NULL) {
+  ggplot(df, aes(x = time, y = cif,
+                 color = .data[[exposure]], linetype = .data[[exposure]])) +
+    geom_step(linewidth = 1) +
+    scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+    labs(x = "Days from admission",
+         y = "Adjusted CIF (Death)",
+         color = "Alcoholic hepatitis",
+         linetype = "Alcoholic hepatitis",
+         subtitle = subtitle) +
+    theme_minimal(base_size = 12) +
+    theme(legend.position = "bottom")
+}
 ```
 
 ## Analysis Cohort
@@ -122,6 +173,21 @@ tidycmprsk::crr(
   tbl_regression(exponentiate = TRUE)
 ```
 
+```{r fg-meld3-cif}
+#| code-fold: true
+#| code-summary: "Show adjusted CIF (MELD 3.0 model)"
+cif_meld3 <- adjusted_cif(
+  prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
+    age + sex_male + hispanic + admit_meld_3 + etoh_hepatitis,
+  data = analysis
+)
+
+plot_adjusted_cif(
+  cif_meld3,
+  subtitle = "MELD 3.0 model — continuous covariates at median, categoricals at modal level"
+)
+```
+
 ## Adjusted Fine-Gray — ACLF grade model
 
 Covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`.
@@ -135,4 +201,19 @@ tidycmprsk::crr(
   data = analysis
 ) %>%
   tbl_regression(exponentiate = TRUE)
+```
+
+```{r fg-aclf-cif}
+#| code-fold: true
+#| code-summary: "Show adjusted CIF (ACLF model)"
+cif_aclf <- adjusted_cif(
+  prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
+    age + sex_male + hispanic + aclf_grade + etoh_hepatitis,
+  data = analysis
+)
+
+plot_adjusted_cif(
+  cif_aclf,
+  subtitle = "ACLF-grade model — continuous covariates at median, categoricals at modal level"
+)
 ```
