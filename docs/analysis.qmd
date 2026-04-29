@@ -59,24 +59,35 @@ adjusted_cif <- function(formula, data, exposure = "etoh_hepatitis",
     dplyr::mutate(time = as.numeric(time))
 }
 
-plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis", subtitle = NULL) {
+plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis",
+                              title = NULL, subtitle = NULL) {
   ggplot(df, aes(x = time, y = cif,
                  color = .data[[exposure]], linetype = .data[[exposure]])) +
     geom_step(linewidth = 1) +
     scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
     labs(x = "Days from admission",
-         y = "Adjusted CIF (Death)",
+         y = "Adjusted CIF — Death",
          color = "Alcoholic hepatitis",
          linetype = "Alcoholic hepatitis",
-         subtitle = subtitle) +
+         title = title,
+         subtitle = subtitle,
+         caption = "Outcome: death (cause 1)  |  Competing risk: liver transplant (cause 2)") +
     theme_minimal(base_size = 12) +
-    theme(legend.position = "bottom")
+    theme(legend.position = "bottom",
+          plot.caption = element_text(face = "italic"))
 }
 ```
 
 ## Analysis Cohort
 
-`master` comes from the shared pipeline. The exposure is `etoh_hepatitis`; the competing-risk outcome is `time_to_death_90days_cmp` / `time_to_death_status_90days_cmp` (0 = censored, 1 = death, 2 = transplant).
+`master` comes from the shared pipeline. Throughout this analysis:
+
+- **Exposure:** `etoh_hepatitis` — alcoholic hepatitis (AH) vs. non-AH
+- **Primary outcome (event of interest, cause = 1):** death within 90 days
+- **Competing risk (cause = 2):** liver transplant within 90 days
+- **Censoring (cause = 0):** alive and not transplanted at 90 days / lost to follow-up
+
+Time and status come from the shared pipeline variables `time_to_death_90days_cmp` / `time_to_death_status_90days_cmp` (0 = censored, 1 = death, 2 = transplant).
 
 ```{r cohort}
 #| code-fold: true
@@ -141,6 +152,8 @@ create_table_one(
 
 ## Unadjusted Fine-Gray — 90-day mortality (AH vs. non-AH)
 
+**Outcome:** death within 90 days (cause 1) &nbsp;·&nbsp; **Competing risk:** liver transplant (cause 2)
+
 ```{r fg-unadj}
 #| code-fold: true
 #| code-summary: "Show unadjusted Fine-Gray"
@@ -149,18 +162,30 @@ fg_unadj <- tidycmprsk::crr(
   data = analysis
 )
 
-fg_unadj %>% tbl_regression(exponentiate = TRUE)
+fg_unadj %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Unadjusted subdistribution hazard ratio — Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+  )
 
 cuminc(Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis, data = analysis) %>%
   ggcuminc(outcome = "Death") +
-  labs(x = "Days from admission", y = "Cumulative incidence of death") +
+  labs(
+    title    = "Unadjusted 90-day cumulative incidence of death",
+    subtitle = "AH vs. non-AH",
+    x        = "Days from admission",
+    y        = "Cumulative incidence — Death",
+    caption  = "Outcome: death (cause 1)  |  Competing risk: liver transplant (cause 2)"
+  ) +
   add_confidence_interval() +
-  add_risktable()
+  add_risktable() +
+  theme(plot.caption = element_text(face = "italic"))
 ```
 
 ## Adjusted Fine-Gray — MELD 3.0 model
 
-Covariates: `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`.
+**Outcome:** death within 90 days (cause 1) &nbsp;·&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;·&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`.
 
 ```{r fg-meld3}
 #| code-fold: true
@@ -170,7 +195,10 @@ tidycmprsk::crr(
     age + sex_male + hispanic + admit_meld_3 + etoh_hepatitis,
   data = analysis
 ) %>%
-  tbl_regression(exponentiate = TRUE)
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Adjusted (MELD 3.0) subdistribution hazard ratio — Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+  )
 ```
 
 ```{r fg-meld3-cif}
@@ -184,13 +212,15 @@ cif_meld3 <- adjusted_cif(
 
 plot_adjusted_cif(
   cif_meld3,
-  subtitle = "MELD 3.0 model — continuous covariates at median, categoricals at modal level"
+  title    = "Adjusted 90-day CIF of death — MELD 3.0 model",
+  subtitle = "Continuous covariates at median, categoricals at modal level"
 )
 ```
 
 ## Adjusted Fine-Gray — ACLF grade model
 
-Covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`.
+**Outcome:** death within 90 days (cause 1) &nbsp;·&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;·&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`.
 
 ```{r fg-aclf}
 #| code-fold: true
@@ -200,7 +230,10 @@ tidycmprsk::crr(
     age + sex_male + hispanic + aclf_grade + etoh_hepatitis,
   data = analysis
 ) %>%
-  tbl_regression(exponentiate = TRUE)
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Adjusted (ACLF grade) subdistribution hazard ratio — Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+  )
 ```
 
 ```{r fg-aclf-cif}
@@ -214,6 +247,7 @@ cif_aclf <- adjusted_cif(
 
 plot_adjusted_cif(
   cif_aclf,
-  subtitle = "ACLF-grade model — continuous covariates at median, categoricals at modal level"
+  title    = "Adjusted 90-day CIF of death — ACLF-grade model",
+  subtitle = "Continuous covariates at median, categoricals at modal level"
 )
 ```
