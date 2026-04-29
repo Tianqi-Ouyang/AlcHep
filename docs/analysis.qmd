@@ -31,7 +31,9 @@ source(knitr::purl(
 # Continuous covariates are held at their median; factor covariates at their
 # modal level. The exposure variable is varied across its levels.
 adjusted_cif <- function(formula, data, exposure = "etoh_hepatitis",
-                         times = 0:90, cause = 1) {
+                         times = 0:90,
+                         cause = 1) {           # cause = 1 -> Death (outcome of interest)
+                                                # cause = 2 -> Transplant (competing risk)
   fg <- riskRegression::FGR(formula, data = data, cause = cause)
 
   covars <- setdiff(all.vars(formula)[-c(1, 2)], exposure)
@@ -92,6 +94,13 @@ Time and status come from the shared pipeline variables `time_to_death_90days_cm
 ```{r cohort}
 #| code-fold: true
 #| code-summary: "Show cohort filter"
+# Cause coding for the competing-risk event factor `event_cmp`:
+#   level 1 "Censored"   -> censoring        (numeric code 0)
+#   level 2 "Death"      -> OUTCOME OF INTEREST (numeric code 1)
+#   level 3 "Transplant" -> COMPETING RISK   (numeric code 2)
+# This ordering matters: tidycmprsk::crr() treats the first level as the
+# censoring code, and `failcode` selects which remaining level is the cause
+# of interest (all other non-censoring levels become competing risks).
 analysis <- master %>%
   filter(!is.na(etoh_hepatitis)) %>%
   mutate(
@@ -157,9 +166,12 @@ create_table_one(
 ```{r fg-unadj}
 #| code-fold: true
 #| code-summary: "Show unadjusted Fine-Gray"
+# Outcome of interest = "Death"; competing risk = "Transplant"
+# (`failcode` is matched against the levels of `event_cmp`).
 fg_unadj <- tidycmprsk::crr(
   Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis,
-  data = analysis
+  data     = analysis,
+  failcode = "Death"   # cause of interest -> all other non-censoring levels are competing risks
 )
 
 fg_unadj %>%
@@ -190,10 +202,12 @@ cuminc(Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis, data = analys
 ```{r fg-meld3}
 #| code-fold: true
 #| code-summary: "Show MELD 3.0 adjusted Fine-Gray"
+# Outcome of interest = "Death"; competing risk = "Transplant"
 tidycmprsk::crr(
   Surv(time_to_death_90days_cmp, event_cmp) ~
     age + sex_male + hispanic + admit_meld_3 + etoh_hepatitis,
-  data = analysis
+  data     = analysis,
+  failcode = "Death"   # competing risk: "Transplant"
 ) %>%
   tbl_regression(exponentiate = TRUE) %>%
   modify_caption(
@@ -225,10 +239,12 @@ plot_adjusted_cif(
 ```{r fg-aclf}
 #| code-fold: true
 #| code-summary: "Show ACLF-grade adjusted Fine-Gray"
+# Outcome of interest = "Death"; competing risk = "Transplant"
 tidycmprsk::crr(
   Surv(time_to_death_90days_cmp, event_cmp) ~
     age + sex_male + hispanic + aclf_grade + etoh_hepatitis,
-  data = analysis
+  data     = analysis,
+  failcode = "Death"   # competing risk: "Transplant"
 ) %>%
   tbl_regression(exponentiate = TRUE) %>%
   modify_caption(
