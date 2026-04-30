@@ -1,5 +1,5 @@
 ---
-title: "AlcHep — Analysis"
+title: "AlcHep  -  Analysis"
 date: today
 execute:
   echo: true
@@ -71,7 +71,7 @@ plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis",
                        expand = c(0, 0)) +
     scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
     labs(x = "Days from admission",
-         y = "Adjusted CIF — Death",
+         y = "Adjusted CIF  -  Death",
          color = "Alcoholic hepatitis",
          linetype = "Alcoholic hepatitis",
          title = title,
@@ -87,7 +87,7 @@ plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis",
 
 `master` comes from the shared pipeline. Throughout this analysis:
 
-- **Exposure:** `etoh_hepatitis` — alcoholic hepatitis (AH) vs. non-AH
+- **Exposure:** `etoh_hepatitis`  -  alcoholic hepatitis (AH) vs. non-AH
 - **Primary outcome (event of interest, cause = 1):** death within 90 days
 - **Competing risk (cause = 2):** liver transplant within 90 days
 - **Censoring (cause = 0):** alive and not transplanted at 90 days / lost to follow-up
@@ -114,7 +114,7 @@ analysis <- master %>%
   )
 ```
 
-## Table 1 — Demographics by `etoh_hepatitis`
+## Table 1  -  Demographics by `etoh_hepatitis`
 
 Variable list taken from `Requests/AlcHep Data Request 04162026.docx`.
 
@@ -162,9 +162,9 @@ create_table_one(
 )
 ```
 
-## Unadjusted Fine-Gray — 90-day mortality (AH vs. non-AH)
+## Unadjusted Fine-Gray  -  90-day mortality (AH vs. non-AH)
 
-**Outcome:** death within 90 days (cause 1) &nbsp;·&nbsp; **Competing risk:** liver transplant (cause 2)
+**Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
 
 ```{r fg-unadj}
 #| code-fold: true
@@ -180,10 +180,10 @@ fg_unadj <- tidycmprsk::crr(
 fg_unadj %>%
   tbl_regression(exponentiate = TRUE) %>%
   modify_caption(
-    "Unadjusted subdistribution hazard ratio — Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+    "Unadjusted subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
 
-# Aalen–Johansen non-parametric CIF (used for both the plot and the day-90 estimates below)
+# Aalen-Johansen non-parametric CIF (used for both the plot and the day-90 estimates below)
 ci_unadj <- cuminc(
   Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis,
   data = analysis
@@ -195,7 +195,7 @@ ci_unadj %>%
     title    = "Unadjusted 90-day cumulative incidence of death",
     subtitle = "AH vs. non-AH",
     x        = "Days from admission",
-    y        = "Cumulative incidence — Death",
+    y        = "Cumulative incidence  -  Death",
     caption  = "Outcome: death (cause 1)  |  Competing risk: liver transplant (cause 2)"
   ) +
   add_confidence_interval() +
@@ -208,7 +208,7 @@ ci_unadj %>%
 
 ### 90-day cumulative incidence of death (AH vs. non-AH)
 
-Non-parametric **Aalen–Johansen** estimator at *t* = 90 days, accounting for liver transplant as a competing risk. 95% CIs use the log–log transformation.
+Non-parametric **Aalen-Johansen** estimator at *t* = 90 days, accounting for liver transplant as a competing risk. 95% CIs use the log-log transformation.
 
 ```{r ci90-table}
 #| code-fold: true
@@ -221,11 +221,11 @@ ci90_raw %>%
   transmute(
     Group              = strata,
     `CIF at 90d (%)`   = sprintf("%.1f", 100 * estimate),
-    `95% CI (%)`       = sprintf("%.1f – %.1f", 100 * conf.low, 100 * conf.high)
+    `95% CI (%)`       = sprintf("%.1f - %.1f", 100 * conf.low, 100 * conf.high)
   ) %>%
   knitr::kable(
     align   = "lrr",
-    caption = "Aalen–Johansen 90-day cumulative incidence of death (competing risk: liver transplant)."
+    caption = "Aalen-Johansen 90-day cumulative incidence of death (competing risk: liver transplant)."
   )
 ```
 
@@ -239,16 +239,16 @@ nah <- ci90_raw %>% filter(strata == "Non-AH")
 cat(glue::glue(
   "At 90 days the cumulative incidence of death accounting for liver transplant ",
   "as a competing risk was **{sprintf('%.1f', 100*ah$estimate)}%** in the AH group ",
-  "(95% CI {sprintf('%.1f', 100*ah$conf.low)}–{sprintf('%.1f', 100*ah$conf.high)}) ",
+  "(95% CI {sprintf('%.1f', 100*ah$conf.low)}-{sprintf('%.1f', 100*ah$conf.high)}) ",
   "and **{sprintf('%.1f', 100*nah$estimate)}%** in the non-AH group ",
-  "(95% CI {sprintf('%.1f', 100*nah$conf.low)}–{sprintf('%.1f', 100*nah$conf.high)})."
+  "(95% CI {sprintf('%.1f', 100*nah$conf.low)}-{sprintf('%.1f', 100*nah$conf.high)})."
 ))
 ```
 
-## Adjusted Fine-Gray — MELD 3.0 model
+## Adjusted Fine-Gray  -  MELD 3.0 model
 
-**Outcome:** death within 90 days (cause 1) &nbsp;·&nbsp; **Competing risk:** liver transplant (cause 2)
-&nbsp;·&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`.
+**Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`.
 
 ```{r fg-meld3}
 #| code-fold: true
@@ -262,7 +262,7 @@ tidycmprsk::crr(
 ) %>%
   tbl_regression(exponentiate = TRUE) %>%
   modify_caption(
-    "Adjusted (MELD 3.0) subdistribution hazard ratio — Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+    "Adjusted (MELD 3.0) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
 ```
 
@@ -277,15 +277,15 @@ cif_meld3 <- adjusted_cif(
 
 plot_adjusted_cif(
   cif_meld3,
-  title    = "Adjusted 90-day CIF of death — MELD 3.0 model",
+  title    = "Adjusted 90-day CIF of death  -  MELD 3.0 model",
   subtitle = "Continuous covariates at median, categoricals at modal level"
 )
 ```
 
-## Adjusted Fine-Gray — ACLF grade model
+## Adjusted Fine-Gray  -  ACLF grade model
 
-**Outcome:** death within 90 days (cause 1) &nbsp;·&nbsp; **Competing risk:** liver transplant (cause 2)
-&nbsp;·&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`.
+**Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`.
 
 ```{r fg-aclf}
 #| code-fold: true
@@ -299,7 +299,7 @@ tidycmprsk::crr(
 ) %>%
   tbl_regression(exponentiate = TRUE) %>%
   modify_caption(
-    "Adjusted (ACLF grade) subdistribution hazard ratio — Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+    "Adjusted (ACLF grade) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
 ```
 
@@ -314,7 +314,7 @@ cif_aclf <- adjusted_cif(
 
 plot_adjusted_cif(
   cif_aclf,
-  title    = "Adjusted 90-day CIF of death — ACLF-grade model",
+  title    = "Adjusted 90-day CIF of death  -  ACLF-grade model",
   subtitle = "Continuous covariates at median, categoricals at modal level"
 )
 ```

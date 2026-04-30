@@ -1,5 +1,5 @@
 ---
-title: "AlcHep — Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin"
+title: "AlcHep  -  Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin"
 date: last-modified
 ---
 
@@ -9,7 +9,7 @@ Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (
 
 ## Exposure
 
-- `etoh_hepatitis` — alcoholic hepatitis at admission (AH vs. non-AH)
+- `etoh_hepatitis`  -  alcoholic hepatitis at admission (AH vs. non-AH)
 
 ## Outcomes
 
@@ -19,10 +19,10 @@ Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (
 
 ## Analyses
 
-1. **Table 1** — Demographics and clinical characteristics stratified by `etoh_hepatitis`
-2. **Unadjusted Fine-Gray** — 90-day cumulative incidence of mortality (AH vs. non-AH)
-3. **Adjusted Fine-Gray (MELD 3.0)** — covariates: `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`
-4. **Adjusted Fine-Gray (ACLF)** — covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`
+1. **Table 1**  -  Demographics and clinical characteristics stratified by `etoh_hepatitis`
+2. **Unadjusted Fine-Gray**  -  90-day cumulative incidence of mortality (AH vs. non-AH)
+3. **Adjusted Fine-Gray (MELD 3.0)**  -  covariates: `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`
+4. **Adjusted Fine-Gray (ACLF)**  -  covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`
 
 ## Data Request
 
