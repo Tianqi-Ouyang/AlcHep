@@ -66,6 +66,9 @@ plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis",
   ggplot(df, aes(x = time, y = cif,
                  color = .data[[exposure]], linetype = .data[[exposure]])) +
     geom_step(linewidth = 1) +
+    scale_x_continuous(breaks = seq(0, 90, by = 30),
+                       limits = c(0, 90),
+                       expand = c(0, 0)) +
     scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
     labs(x = "Days from admission",
          y = "Adjusted CIF — Death",
@@ -191,6 +194,9 @@ cuminc(Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis, data = analys
   ) +
   add_confidence_interval() +
   add_risktable() +
+  scale_x_continuous(breaks = seq(0, 90, by = 30),
+                     limits = c(0, 90),
+                     expand = c(0, 0)) +
   theme(plot.caption = element_text(face = "italic"))
 ```
 
