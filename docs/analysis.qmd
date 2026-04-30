@@ -183,7 +183,13 @@ fg_unadj %>%
     "Unadjusted subdistribution hazard ratio — Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
 
-cuminc(Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis, data = analysis) %>%
+# Aalen–Johansen non-parametric CIF (used for both the plot and the day-90 estimates below)
+ci_unadj <- cuminc(
+  Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis,
+  data = analysis
+)
+
+ci_unadj %>%
   ggcuminc(outcome = "Death") +
   labs(
     title    = "Unadjusted 90-day cumulative incidence of death",
@@ -198,6 +204,45 @@ cuminc(Surv(time_to_death_90days_cmp, event_cmp) ~ etoh_hepatitis, data = analys
                      limits = c(0, 90),
                      expand = c(0, 0)) +
   theme(plot.caption = element_text(face = "italic"))
+```
+
+### 90-day cumulative incidence of death (AH vs. non-AH)
+
+Non-parametric **Aalen–Johansen** estimator at *t* = 90 days, accounting for liver transplant as a competing risk. 95% CIs use the log–log transformation.
+
+```{r ci90-table}
+#| code-fold: true
+#| code-summary: "Show 90-day CIF table"
+ci90_raw <- ci_unadj %>%
+  tidy(times = 90) %>%
+  filter(outcome == "Death")
+
+ci90_raw %>%
+  transmute(
+    Group              = strata,
+    `CIF at 90d (%)`   = sprintf("%.1f", 100 * estimate),
+    `95% CI (%)`       = sprintf("%.1f – %.1f", 100 * conf.low, 100 * conf.high)
+  ) %>%
+  knitr::kable(
+    align   = "lrr",
+    caption = "Aalen–Johansen 90-day cumulative incidence of death (competing risk: liver transplant)."
+  )
+```
+
+```{r ci90-sentence}
+#| code-fold: true
+#| code-summary: "Show inline sentence"
+#| results: asis
+ah  <- ci90_raw %>% filter(strata == "AH")
+nah <- ci90_raw %>% filter(strata == "Non-AH")
+
+cat(glue::glue(
+  "At 90 days the cumulative incidence of death accounting for liver transplant ",
+  "as a competing risk was **{sprintf('%.1f', 100*ah$estimate)}%** in the AH group ",
+  "(95% CI {sprintf('%.1f', 100*ah$conf.low)}–{sprintf('%.1f', 100*ah$conf.high)}) ",
+  "and **{sprintf('%.1f', 100*nah$estimate)}%** in the non-AH group ",
+  "(95% CI {sprintf('%.1f', 100*nah$conf.low)}–{sprintf('%.1f', 100*nah$conf.high)})."
+))
 ```
 
 ## Adjusted Fine-Gray — MELD 3.0 model
