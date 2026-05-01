@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-04-30">
+<meta name="dcterms.date" content="2026-05-01">
 
 <title>AlcHep - Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin – Terlipressin — AlcHep</title>
 <style>
@@ -127,7 +127,10 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#project-summary" id="toc-project-summary" class="nav-link active" data-scroll-target="#project-summary">Project Summary</a></li>
   <li><a href="#exposure" id="toc-exposure" class="nav-link" data-scroll-target="#exposure">Exposure</a></li>
   <li><a href="#outcomes" id="toc-outcomes" class="nav-link" data-scroll-target="#outcomes">Outcomes</a></li>
-  <li><a href="#analyses" id="toc-analyses" class="nav-link" data-scroll-target="#analyses">Analyses</a></li>
+  <li><a href="#analyses" id="toc-analyses" class="nav-link" data-scroll-target="#analyses">Analyses</a>
+  <ul class="collapse">
+  <li><a href="#sensitivity-analyses-without-hispanic" id="toc-sensitivity-analyses-without-hispanic" class="nav-link" data-scroll-target="#sensitivity-analyses-without-hispanic">Sensitivity analyses (without <code>hispanic</code>)</a></li>
+  </ul></li>
   <li><a href="#data-request" id="toc-data-request" class="nav-link" data-scroll-target="#data-request">Data Request</a></li>
   </ul>
 </nav>
@@ -148,7 +151,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">April 30, 2026</p>
+      <p class="date">May 1, 2026</p>
     </div>
   </div>
   
@@ -188,6 +191,13 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Adjusted Fine-Gray (MELD 3.0)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>hispanic</code>, <code>admit_meld_3</code>, <code>etoh_hepatitis</code></li>
 <li><strong>Adjusted Fine-Gray (ACLF)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>hispanic</code>, <code>aclf_grade</code>, <code>etoh_hepatitis</code></li>
 </ol>
+<section id="sensitivity-analyses-without-hispanic" class="level3">
+<h3 class="anchored" data-anchor-id="sensitivity-analyses-without-hispanic">Sensitivity analyses (without <code>hispanic</code>)</h3>
+<ol start="5" type="1">
+<li><strong>Adjusted Fine-Gray (MELD 3.0, no hispanic)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>admit_meld_3</code>, <code>etoh_hepatitis</code></li>
+<li><strong>Adjusted Fine-Gray (ACLF, no hispanic)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>aclf_grade</code>, <code>etoh_hepatitis</code></li>
+</ol>
+</section>
 </section>
 <section id="data-request" class="level2">
 <h2 class="anchored" data-anchor-id="data-request">Data Request</h2>
