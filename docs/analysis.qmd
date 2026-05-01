@@ -318,3 +318,81 @@ plot_adjusted_cif(
   subtitle = "Continuous covariates at median, categoricals at modal level"
 )
 ```
+
+# Sensitivity analyses (covariate set without `hispanic`)
+
+Identical Fine-Gray specifications as the primary models above, with `hispanic` dropped from the covariate set.
+
+## Adjusted Fine-Gray  -  MELD 3.0 model (no hispanic)
+
+**Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `admit_meld_3`, `etoh_hepatitis`.
+
+```{r fg-meld3-nohisp}
+#| code-fold: true
+#| code-summary: "Show MELD 3.0 adjusted Fine-Gray (no hispanic)"
+# Outcome of interest = "Death"; competing risk = "Transplant"
+tidycmprsk::crr(
+  Surv(time_to_death_90days_cmp, event_cmp) ~
+    age + sex_male + admit_meld_3 + etoh_hepatitis,
+  data     = analysis,
+  failcode = "Death"
+) %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Adjusted (MELD 3.0, no hispanic) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+  )
+```
+
+```{r fg-meld3-nohisp-cif}
+#| code-fold: true
+#| code-summary: "Show adjusted CIF (MELD 3.0, no hispanic)"
+cif_meld3_nohisp <- adjusted_cif(
+  prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
+    age + sex_male + admit_meld_3 + etoh_hepatitis,
+  data = analysis
+)
+
+plot_adjusted_cif(
+  cif_meld3_nohisp,
+  title    = "Adjusted 90-day CIF of death  -  MELD 3.0 model (no hispanic)",
+  subtitle = "Continuous covariates at median, categoricals at modal level"
+)
+```
+
+## Adjusted Fine-Gray  -  ACLF grade model (no hispanic)
+
+**Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `aclf_grade`, `etoh_hepatitis`.
+
+```{r fg-aclf-nohisp}
+#| code-fold: true
+#| code-summary: "Show ACLF-grade adjusted Fine-Gray (no hispanic)"
+# Outcome of interest = "Death"; competing risk = "Transplant"
+tidycmprsk::crr(
+  Surv(time_to_death_90days_cmp, event_cmp) ~
+    age + sex_male + aclf_grade + etoh_hepatitis,
+  data     = analysis,
+  failcode = "Death"
+) %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Adjusted (ACLF grade, no hispanic) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+  )
+```
+
+```{r fg-aclf-nohisp-cif}
+#| code-fold: true
+#| code-summary: "Show adjusted CIF (ACLF, no hispanic)"
+cif_aclf_nohisp <- adjusted_cif(
+  prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
+    age + sex_male + aclf_grade + etoh_hepatitis,
+  data = analysis
+)
+
+plot_adjusted_cif(
+  cif_aclf_nohisp,
+  title    = "Adjusted 90-day CIF of death  -  ACLF-grade model (no hispanic)",
+  subtitle = "Continuous covariates at median, categoricals at modal level"
+)
+```
