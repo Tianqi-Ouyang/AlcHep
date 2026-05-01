@@ -396,3 +396,44 @@ plot_adjusted_cif(
   subtitle = "Continuous covariates at median, categoricals at modal level"
 )
 ```
+
+# Minimal model (`age` + `admit_meld_3` only)
+
+Same Fine-Gray specification as the MELD 3.0 model, with the covariate set reduced to `age` and `admit_meld_3` (plus the exposure `etoh_hepatitis`).
+
+## Adjusted Fine-Gray  -  age + admit_meld_3
+
+**Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;|&nbsp; **Covariates:** `age`, `admit_meld_3`, `etoh_hepatitis`.
+
+```{r fg-min}
+#| code-fold: true
+#| code-summary: "Show minimal adjusted Fine-Gray"
+# Outcome of interest = "Death"; competing risk = "Transplant"
+tidycmprsk::crr(
+  Surv(time_to_death_90days_cmp, event_cmp) ~
+    age + admit_meld_3 + etoh_hepatitis,
+  data     = analysis,
+  failcode = "Death"
+) %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Adjusted (age + admit_meld_3) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+  )
+```
+
+```{r fg-min-cif}
+#| code-fold: true
+#| code-summary: "Show adjusted CIF (age + admit_meld_3)"
+cif_min <- adjusted_cif(
+  prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
+    age + admit_meld_3 + etoh_hepatitis,
+  data = analysis
+)
+
+plot_adjusted_cif(
+  cif_min,
+  title    = "Adjusted 90-day CIF of death  -  age + admit_meld_3",
+  subtitle = "Continuous covariates at median"
+)
+```
