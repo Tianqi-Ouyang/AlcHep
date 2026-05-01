@@ -256,7 +256,7 @@
     "href": "index.html#analyses",
     "title": "AlcHep - Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin",
     "section": "Analyses",
-    "text": "Analyses\n\nTable 1 - Demographics and clinical characteristics stratified by etoh_hepatitis\nUnadjusted Fine-Gray - 90-day cumulative incidence of mortality (AH vs. non-AH)\nAdjusted Fine-Gray (MELD 3.0) - covariates: age, sex_male, hispanic, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF) - covariates: age, sex_male, hispanic, aclf_grade, etoh_hepatitis\n\n\nSensitivity analyses (without hispanic)\n\nAdjusted Fine-Gray (MELD 3.0, no hispanic) - covariates: age, sex_male, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF, no hispanic) - covariates: age, sex_male, aclf_grade, etoh_hepatitis"
+    "text": "Analyses\n\nTable 1 - Demographics and clinical characteristics stratified by etoh_hepatitis\nUnadjusted Fine-Gray - 90-day cumulative incidence of mortality (AH vs. non-AH)\nAdjusted Fine-Gray (MELD 3.0) - covariates: age, sex_male, hispanic, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF) - covariates: age, sex_male, hispanic, aclf_grade, etoh_hepatitis\n\n\nModels without hispanic\n\nAdjusted Fine-Gray (MELD 3.0, no hispanic) - covariates: age, sex_male, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF, no hispanic) - covariates: age, sex_male, aclf_grade, etoh_hepatitis"
   },
   {
     "objectID": "index.html#data-request",
