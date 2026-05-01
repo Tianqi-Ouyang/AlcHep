@@ -24,7 +24,7 @@ Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (
 3. **Adjusted Fine-Gray (MELD 3.0)**  -  covariates: `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`
 4. **Adjusted Fine-Gray (ACLF)**  -  covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`
 
-### Sensitivity analyses (without `hispanic`)
+### Models without `hispanic`
 
 5. **Adjusted Fine-Gray (MELD 3.0, no hispanic)**  -  covariates: `age`, `sex_male`, `admit_meld_3`, `etoh_hepatitis`
 6. **Adjusted Fine-Gray (ACLF, no hispanic)**  -  covariates: `age`, `sex_male`, `aclf_grade`, `etoh_hepatitis`

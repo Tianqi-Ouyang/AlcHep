@@ -319,7 +319,7 @@ plot_adjusted_cif(
 )
 ```
 
-# Sensitivity analyses (covariate set without `hispanic`)
+# Models without `hispanic`
 
 Identical Fine-Gray specifications as the primary models above, with `hispanic` dropped from the covariate set.
 
