@@ -10,7 +10,7 @@ execute:
   dpi: 110
 ---
 
-[**Download all plots (PowerPoint)**](AlcHep_plots.pptx) - one slide per figure, vector graphics where possible.
+Each figure has its own download link directly underneath. PowerPoint files use vector graphics where the renderer supports it, falling back to a 150-dpi PNG snapshot otherwise.
 
 ```{r setup}
 #| include: false
@@ -36,11 +36,30 @@ source(knitr::purl(
   quiet = TRUE
 ))
 
-# Container that will collect every figure for the PowerPoint export.
-plot_registry <- list()
-register_plot <- function(name, p) {
-  plot_registry[[name]] <<- p
-  p
+# Save a single ggplot to docs/plots/<slug>.pptx (one slide).
+# Tries editable vector graphics via rvg::dml() first, falls back to a PNG
+# snapshot for compound plots (e.g. ggsurvfit + risktable patchwork) that
+# the rvg pptx device can't paginate. Returns the plot so the caller can
+# print it inline.
+save_plot_pptx <- function(slug, plot, title = slug) {
+  dir.create("plots", showWarnings = FALSE, recursive = TRUE)
+  loc <- ph_location(left = 0.5, top = 1.3, width = 9.0, height = 5.5)
+
+  ppt <- read_pptx() %>%
+    add_slide(layout = "Title and Content", master = "Office Theme") %>%
+    ph_with(value = title, location = ph_location_type("title"))
+
+  ppt <- tryCatch(
+    ph_with(ppt, value = dml(ggobj = plot, bg = "transparent"), location = loc),
+    error = function(e) {
+      tmp <- tempfile(fileext = ".png")
+      ggsave(tmp, plot = plot, width = 9, height = 5, dpi = 150, bg = "white")
+      ph_with(ppt, value = external_img(tmp, width = 9.0, height = 5.5), location = loc)
+    }
+  )
+
+  print(ppt, target = file.path("plots", paste0(slug, ".pptx")))
+  plot
 }
 
 ```{r helpers}
@@ -241,9 +260,11 @@ p_unadj <- ci_unadj %>%
     plot.margin  = margin(5, 10, 5, 15)   # extra left margin
   )
 
-register_plot("unadjusted_cif", p_unadj)
-p_unadj
+save_plot_pptx("unadjusted_cif", p_unadj,
+               "Unadjusted 90-day cumulative incidence of death (AH vs. non-AH)")
 ```
+
+[Download this plot as PowerPoint](plots/unadjusted_cif.pptx)
 
 ### 90-day cumulative incidence of death (AH vs. non-AH)
 
@@ -314,15 +335,18 @@ cif_meld3 <- adjusted_cif(
   data = analysis
 )
 
-register_plot(
+save_plot_pptx(
   "adjusted_meld3",
   plot_adjusted_cif(
     cif_meld3,
     title    = "Adjusted 90-day CIF of death  -  MELD 3.0 model",
     subtitle = "Continuous covariates at median, categoricals at modal level"
-  )
+  ),
+  "Adjusted CIF (MELD 3.0 model)"
 )
 ```
+
+[Download this plot as PowerPoint](plots/adjusted_meld3.pptx)
 
 ## Adjusted Fine-Gray  -  ACLF grade model
 
@@ -354,15 +378,18 @@ cif_aclf <- adjusted_cif(
   data = analysis
 )
 
-register_plot(
+save_plot_pptx(
   "adjusted_aclf",
   plot_adjusted_cif(
     cif_aclf,
     title    = "Adjusted 90-day CIF of death  -  ACLF-grade model",
     subtitle = "Continuous covariates at median, categoricals at modal level"
-  )
+  ),
+  "Adjusted CIF (ACLF-grade model)"
 )
 ```
+
+[Download this plot as PowerPoint](plots/adjusted_aclf.pptx)
 
 # Models without `hispanic`
 
@@ -398,15 +425,18 @@ cif_meld3_nohisp <- adjusted_cif(
   data = analysis
 )
 
-register_plot(
+save_plot_pptx(
   "adjusted_meld3_nohisp",
   plot_adjusted_cif(
     cif_meld3_nohisp,
     title    = "Adjusted 90-day CIF of death  -  MELD 3.0 model (no hispanic)",
     subtitle = "Continuous covariates at median, categoricals at modal level"
-  )
+  ),
+  "Adjusted CIF (MELD 3.0, no hispanic)"
 )
 ```
+
+[Download this plot as PowerPoint](plots/adjusted_meld3_nohisp.pptx)
 
 ## Adjusted Fine-Gray  -  ACLF grade model (no hispanic)
 
@@ -438,15 +468,18 @@ cif_aclf_nohisp <- adjusted_cif(
   data = analysis
 )
 
-register_plot(
+save_plot_pptx(
   "adjusted_aclf_nohisp",
   plot_adjusted_cif(
     cif_aclf_nohisp,
     title    = "Adjusted 90-day CIF of death  -  ACLF-grade model (no hispanic)",
     subtitle = "Continuous covariates at median, categoricals at modal level"
-  )
+  ),
+  "Adjusted CIF (ACLF, no hispanic)"
 )
 ```
+
+[Download this plot as PowerPoint](plots/adjusted_aclf_nohisp.pptx)
 
 # Minimal model (`age` + `admit_meld_3` only)
 
@@ -482,15 +515,18 @@ cif_min <- adjusted_cif(
   data = analysis
 )
 
-register_plot(
+save_plot_pptx(
   "adjusted_age_meld3",
   plot_adjusted_cif(
     cif_min,
     title    = "Adjusted 90-day CIF of death  -  age + admit_meld_3",
     subtitle = "Continuous covariates at median"
-  )
+  ),
+  "Adjusted CIF (age + admit_meld_3)"
 )
 ```
+
+[Download this plot as PowerPoint](plots/adjusted_age_meld3.pptx)
 
 # Reference model (no exposure): `age` + `admit_meld_3`
 
@@ -554,53 +590,8 @@ p_noexp <- ggplot(cif_noexp, aes(x = time, y = cif)) +
   theme_minimal(base_size = 12) +
   theme(plot.caption = element_text(face = "italic"))
 
-register_plot("reference_no_exposure", p_noexp)
-p_noexp
+save_plot_pptx("reference_no_exposure", p_noexp,
+               "Reference CIF (age + admit_meld_3, no exposure)")
 ```
 
-# Download
-
-All figures above are bundled into a single PowerPoint deck (one slide per figure). Vector graphics are used where possible so you can recolor / resize in PowerPoint.
-
-```{r build-pptx}
-#| include: false
-
-# Friendly slide titles paired to registry keys (drives slide order).
-slide_titles <- c(
-  unadjusted_cif         = "Unadjusted 90-day cumulative incidence of death (AH vs. non-AH)",
-  adjusted_meld3         = "Adjusted CIF (MELD 3.0 model)",
-  adjusted_aclf          = "Adjusted CIF (ACLF-grade model)",
-  adjusted_meld3_nohisp  = "Adjusted CIF (MELD 3.0, no hispanic)",
-  adjusted_aclf_nohisp   = "Adjusted CIF (ACLF, no hispanic)",
-  adjusted_age_meld3     = "Adjusted CIF (age + admit_meld_3)",
-  reference_no_exposure  = "Reference CIF (age + admit_meld_3, no exposure)"
-)
-
-# Add one slide per plot. Try editable vector graphics via rvg::dml();
-# fall back to a PNG snapshot for compound plots (e.g. ggsurvfit + risktable)
-# which the rvg pptx device can't paginate.
-add_plot_slide <- function(ppt, title, p) {
-  ppt <- add_slide(ppt, layout = "Title and Content", master = "Office Theme")
-  ppt <- ph_with(ppt, value = title, location = ph_location_type("title"))
-  loc <- ph_location(left = 0.5, top = 1.3, width = 9.0, height = 5.5)
-
-  tryCatch(
-    ph_with(ppt, value = dml(ggobj = p, bg = "transparent"), location = loc),
-    error = function(e) {
-      tmp <- tempfile(fileext = ".png")
-      ggsave(tmp, plot = p, width = 9, height = 5, dpi = 150, bg = "white")
-      ph_with(ppt, value = external_img(tmp, width = 9.0, height = 5.5), location = loc)
-    }
-  )
-}
-
-ppt <- read_pptx()
-for (key in names(slide_titles)) {
-  p <- plot_registry[[key]]
-  if (is.null(p)) next
-  ppt <- add_plot_slide(ppt, slide_titles[[key]], p)
-}
-
-# Write next to _quarto.yml so Quarto's `resources:` rule copies it into _site/
-print(ppt, target = "AlcHep_plots.pptx")
-```
+[Download this plot as PowerPoint](plots/reference_no_exposure.pptx)

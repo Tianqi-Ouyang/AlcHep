@@ -6,6 +6,6 @@
 docs/.quarto/
 docs/_site/
 docs/analysis_files/
-docs/AlcHep_plots.pptx
+docs/plots/
 
 .claude/

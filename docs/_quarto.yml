@@ -2,7 +2,7 @@ project:
   type: website
   output-dir: _site
   resources:
-    - "AlcHep_plots.pptx"
+    - "plots/*.pptx"
 
 website:
   title: "Terlipressin — AlcHep"
