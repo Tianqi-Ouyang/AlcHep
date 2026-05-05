@@ -35,7 +35,7 @@ Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (
 
 ### Reference model (no exposure)
 
-8. **Adjusted Fine-Gray (age + admit_meld_3, no exposure)**  -  covariates: `age`, `admit_meld_3`. No `etoh_hepatitis`; CIF plotted at median age and median MELD 3.0.
+8. **Adjusted Fine-Gray (age + admit_meld_3, no exposure)**  -  covariates: `age`, `admit_meld_3`. No `etoh_hepatitis`. HR table only (no CIF plot).
 
 ## Data Request
 
