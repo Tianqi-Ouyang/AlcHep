@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-05-01">
+<meta name="dcterms.date" content="2026-05-05">
 
 <title>AlcHep - Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin – Terlipressin — AlcHep</title>
 <style>
@@ -131,6 +131,7 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#models-without-hispanic" id="toc-models-without-hispanic" class="nav-link" data-scroll-target="#models-without-hispanic">Models without <code>hispanic</code></a></li>
   <li><a href="#minimal-model" id="toc-minimal-model" class="nav-link" data-scroll-target="#minimal-model">Minimal model</a></li>
+  <li><a href="#reference-model-no-exposure" id="toc-reference-model-no-exposure" class="nav-link" data-scroll-target="#reference-model-no-exposure">Reference model (no exposure)</a></li>
   </ul></li>
   <li><a href="#data-request" id="toc-data-request" class="nav-link" data-scroll-target="#data-request">Data Request</a></li>
   </ul>
@@ -152,7 +153,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">May 1, 2026</p>
+      <p class="date">May 5, 2026</p>
     </div>
   </div>
   
@@ -203,6 +204,12 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="minimal-model">Minimal model</h3>
 <ol start="7" type="1">
 <li><strong>Adjusted Fine-Gray (age + admit_meld_3)</strong> - covariates: <code>age</code>, <code>admit_meld_3</code>, <code>etoh_hepatitis</code></li>
+</ol>
+</section>
+<section id="reference-model-no-exposure" class="level3">
+<h3 class="anchored" data-anchor-id="reference-model-no-exposure">Reference model (no exposure)</h3>
+<ol start="8" type="1">
+<li><strong>Adjusted Fine-Gray (age + admit_meld_3, no exposure)</strong> - covariates: <code>age</code>, <code>admit_meld_3</code>. No <code>etoh_hepatitis</code>; CIF plotted at median age and median MELD 3.0.</li>
 </ol>
 </section>
 </section>
