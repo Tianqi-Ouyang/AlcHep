@@ -446,3 +446,66 @@ plot_adjusted_cif(
   subtitle = "Continuous covariates at median"
 )
 ```
+
+# Reference model (no exposure): `age` + `admit_meld_3`
+
+Same Fine-Gray specification with `etoh_hepatitis` removed entirely. This is a population-level reference: the AH vs non-AH comparison is gone, and the CIF plot shows a single curve for a typical patient (median age, median admit MELD 3.0).
+
+## Adjusted Fine-Gray  -  age + admit_meld_3 (no exposure)
+
+**Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
+&nbsp;|&nbsp; **Covariates:** `age`, `admit_meld_3`. **Exposure:** *none.*
+
+```{r fg-noexp}
+#| code-fold: true
+#| code-summary: "Show no-exposure Fine-Gray"
+# No exposure variable - this is a population reference model.
+tidycmprsk::crr(
+  Surv(time_to_death_90days_cmp, event_cmp) ~ age + admit_meld_3,
+  data     = analysis,
+  failcode = "Death"
+) %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "No-exposure subdistribution hazard ratio (age + admit_meld_3)  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+  )
+```
+
+```{r fg-noexp-cif}
+#| code-fold: true
+#| code-summary: "Show predicted CIF (age + admit_meld_3, no exposure)"
+fg_noexp <- riskRegression::FGR(
+  prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
+    age + admit_meld_3,
+  data = analysis, cause = 1   # cause = 1 -> Death
+)
+
+times    <- 0:90
+nd_noexp <- tibble(
+  age          = median(analysis$age,          na.rm = TRUE),
+  admit_meld_3 = median(analysis$admit_meld_3, na.rm = TRUE)
+)
+
+cif_noexp <- as.data.frame(
+    riskRegression::predictRisk(fg_noexp, newdata = nd_noexp, times = times)
+  ) %>%
+  setNames(times) %>%
+  pivot_longer(everything(), names_to = "time", values_to = "cif") %>%
+  mutate(time = as.numeric(time))
+
+ggplot(cif_noexp, aes(x = time, y = cif)) +
+  geom_step(linewidth = 1, color = "#2c8dbb") +
+  scale_x_continuous(breaks = seq(0, 90, by = 30),
+                     limits = c(0, 90), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  labs(
+    title    = "Adjusted 90-day CIF of death  -  age + admit_meld_3 (no exposure)",
+    subtitle = sprintf("Population reference: age = %.0f, admit_meld_3 = %.0f (medians)",
+                       nd_noexp$age, nd_noexp$admit_meld_3),
+    x        = "Days from admission",
+    y        = "Adjusted CIF  -  Death",
+    caption  = "Outcome: death (cause 1)  |  Competing risk: liver transplant (cause 2)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(plot.caption = element_text(face = "italic"))
+```
