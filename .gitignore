@@ -6,3 +6,5 @@
 docs/.quarto/
 docs/_site/
 docs/analysis_files/
+
+.claude/
