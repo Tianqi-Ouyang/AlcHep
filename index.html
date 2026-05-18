@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-05-05">
+<meta name="dcterms.date" content="2026-05-18">
 
 <title>AlcHep - Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin – Terlipressin — AlcHep</title>
 <style>
@@ -132,6 +132,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#models-without-hispanic" id="toc-models-without-hispanic" class="nav-link" data-scroll-target="#models-without-hispanic">Models without <code>hispanic</code></a></li>
   <li><a href="#minimal-model" id="toc-minimal-model" class="nav-link" data-scroll-target="#minimal-model">Minimal model</a></li>
   <li><a href="#reference-model-no-exposure" id="toc-reference-model-no-exposure" class="nav-link" data-scroll-target="#reference-model-no-exposure">Reference model (no exposure)</a></li>
+  <li><a href="#binary-logistic-regression-hrs-overall-response" id="toc-binary-logistic-regression-hrs-overall-response" class="nav-link" data-scroll-target="#binary-logistic-regression-hrs-overall-response">Binary logistic regression (HRS overall response)</a></li>
   </ul></li>
   <li><a href="#data-request" id="toc-data-request" class="nav-link" data-scroll-target="#data-request">Data Request</a></li>
   </ul>
@@ -153,7 +154,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">May 5, 2026</p>
+      <p class="date">May 18, 2026</p>
     </div>
   </div>
   
@@ -210,6 +211,14 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="reference-model-no-exposure">Reference model (no exposure)</h3>
 <ol start="8" type="1">
 <li><strong>Adjusted Fine-Gray (age + admit_meld_3, no exposure)</strong> - covariates: <code>age</code>, <code>admit_meld_3</code>. No <code>etoh_hepatitis</code>. HR table only (no CIF plot).</li>
+</ol>
+</section>
+<section id="binary-logistic-regression-hrs-overall-response" class="level3">
+<h3 class="anchored" data-anchor-id="binary-logistic-regression-hrs-overall-response">Binary logistic regression (HRS overall response)</h3>
+<p>Outcome for both: <code>hrs_responders_cat_2</code> (1 = responder, 0 = non-responder).</p>
+<ol start="9" type="1">
+<li><strong>LR Model 1</strong> - <code>age</code>, <code>sex_male</code>, <code>etoh_hepatitis</code>, <code>aclf_grade</code></li>
+<li><strong>LR Model 2</strong> - <code>age</code>, <code>etoh_hepatitis</code>, <code>day0_meld</code></li>
 </ol>
 </section>
 </section>
