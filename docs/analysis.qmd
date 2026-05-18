@@ -552,3 +552,60 @@ tidycmprsk::crr(
   )
 ```
 
+# Binary logistic regression - HRS overall response
+
+Two multivariable binary logistic regression models for overall HRS response (`hrs_responders_cat_2`, 1 = responder / 0 = non-responder). Odds ratios with 95% confidence intervals.
+
+```{r lr-setup}
+#| include: false
+# Re-cast the outcome and any factor covariates to the forms glm() expects.
+# `hrs_responders_cat_2` is set as a factor in the Table 1 chunk; glm with
+# family = binomial() accepts a 0/1 numeric or a 2-level factor, but cast to
+# numeric here so the reference level is explicitly 0.
+analysis_lr <- analysis %>%
+  mutate(
+    hrs_responders_cat_2 = as.numeric(as.character(hrs_responders_cat_2)),
+    aclf_grade           = factor(aclf_grade),
+    sex_male             = factor(sex_male),
+    etoh_hepatitis       = factor(etoh_hepatitis, levels = c("Non-AH", "AH"))
+  )
+```
+
+## Model 1: age + sex_male + etoh_hepatitis + aclf_grade
+
+**Outcome:** `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
+**Predictors:** `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade`.
+
+```{r lr-model1}
+#| code-fold: true
+#| code-summary: "Show LR Model 1"
+glm(
+  hrs_responders_cat_2 ~ age + sex_male + etoh_hepatitis + aclf_grade,
+  data   = analysis_lr,
+  family = binomial()
+) %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Multivariable LR Model 1 (age + sex_male + etoh_hepatitis + aclf_grade)  -  Outcome: hrs_responders_cat_2"
+  )
+```
+
+## Model 2: age + etoh_hepatitis + day0_meld
+
+**Outcome:** `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
+**Predictors:** `age`, `etoh_hepatitis`, `day0_meld`.
+
+```{r lr-model2}
+#| code-fold: true
+#| code-summary: "Show LR Model 2"
+glm(
+  hrs_responders_cat_2 ~ age + etoh_hepatitis + day0_meld,
+  data   = analysis_lr,
+  family = binomial()
+) %>%
+  tbl_regression(exponentiate = TRUE) %>%
+  modify_caption(
+    "Multivariable LR Model 2 (age + etoh_hepatitis + day0_meld)  -  Outcome: hrs_responders_cat_2"
+  )
+```
+
