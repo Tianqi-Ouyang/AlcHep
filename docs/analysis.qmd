@@ -199,6 +199,41 @@ create_table_one(
 )
 ```
 
+## Table 1 (ACLF grade 3 subgroup)
+
+Restricted to patients with `aclf_grade == 3`. Rows: `hrs_responders_cat_2` (1 = responder, 0 = non-responder). Columns: `etoh_hepatitis` (AH vs. non-AH).
+
+```{r table1-aclf3}
+#| code-fold: true
+#| code-summary: "Show ACLF grade 3 Table 1 code"
+analysis_aclf3 <- analysis %>%
+  filter(as.character(aclf_grade) == "3")
+
+cat(sprintf("ACLF grade 3 cohort size: n = %d\n", nrow(analysis_aclf3)))
+
+analysis_aclf3 %>%
+  select(hrs_responders_cat_2, etoh_hepatitis) %>%
+  tbl_summary(
+    by      = etoh_hepatitis,
+    missing = "ifany",
+    label   = list(hrs_responders_cat_2 ~ "HRS overall response")
+  ) %>%
+  add_p() %>%
+  add_overall() %>%
+  modify_caption(
+    "ACLF grade 3 cohort: HRS overall response (hrs_responders_cat_2) by etoh_hepatitis"
+  )
+
+# CSV companion, matching the main Table 1 convention
+create_table_one(
+  all_vars = "hrs_responders_cat_2",
+  cat_vars = "hrs_responders_cat_2",
+  data     = analysis_aclf3,
+  strata   = "etoh_hepatitis",
+  output   = "/Users/to909/Desktop/Terlipressin projects/AlcHep/Results/Table1_aclf3_etoh_hepatitis.csv"
+)
+```
+
 ## Unadjusted Fine-Gray  -  90-day mortality (AH vs. non-AH)
 
 **Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
