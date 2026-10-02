@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-05-19">
+<meta name="dcterms.date" content="2026-10-02">
 
 <title>AlcHep - Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin – Terlipressin — AlcHep</title>
 <style>
@@ -154,7 +154,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">May 19, 2026</p>
+      <p class="date">October 2, 2026</p>
     </div>
   </div>
   
@@ -220,7 +220,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="binary-logistic-regression-hrs-overall-response">Binary logistic regression (HRS overall response)</h3>
 <p>Outcome for both: <code>hrs_responders_cat_2</code> (1 = responder, 0 = non-responder).</p>
 <ol start="9" type="1">
-<li><strong>LR Model 1</strong> - <code>age</code>, <code>sex_male</code>, <code>etoh_hepatitis</code>, <code>aclf_grade</code></li>
+<li><strong>LR Model 1</strong> - <code>age</code>, <code>sex_male</code>, <code>etoh_hepatitis</code>, <code>aclf_grade</code> (grades 0-1 merged as the reference; see note on the Analysis page)</li>
 <li><strong>LR Model 2</strong> - <code>age</code>, <code>etoh_hepatitis</code>, <code>day0_meld</code></li>
 </ol>
 </section>
@@ -306,7 +306,7 @@ ul.task-list li input[type="checkbox"] {
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/Tianqi-Ouyang\.github\.io\/AlcHep\/");
+        var filterRegex = new RegExp('/' + window.location.host + '/');
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
