@@ -36,6 +36,29 @@ source(knitr::purl(
   quiet = TRUE
 ))
 
+# Reporting precision: OR/HR and 95% CI to 2 decimals, p-values to 3 decimals.
+fmt_estimate <- function(x) gtsummary::style_number(x, digits = 2)
+fmt_pvalue   <- function(x) gtsummary::style_pvalue(x, digits = 3)
+
+# Table 1 via tableone with every value at 3 decimals; writes the CSV and returns the same matrix.
+tableone_3dp <- function(vars, cat_vars, data, strata, output) {
+  t1 <- tableone::CreateTableOne(
+    vars = vars, strata = strata, data = data,
+    factorVars = cat_vars, addOverall = TRUE, includeNA = FALSE
+  )
+  out <- print(
+    t1, showAllLevels = TRUE, nonnormal = setdiff(vars, cat_vars),
+    missing = TRUE, quote = FALSE, noSpaces = TRUE, printToggle = FALSE,
+    catDigits = 3, contDigits = 3, pDigits = 3
+  )
+  # print() always formats Missing at 1 decimal, so recompute it from the data
+  miss_rows <- which(out[, "Missing"] != "")
+  stopifnot(length(miss_rows) == length(vars))
+  out[miss_rows, "Missing"] <- sprintf("%.3f", 100 * colMeans(is.na(data[vars])))
+  write.csv(out, file = output, row.names = TRUE)
+  knitr::kable(out)
+}
+
 # Save a single ggplot to docs/plots/<slug>.pptx (one slide).
 # Tries editable vector graphics via rvg::dml() first, falls back to a PNG
 # snapshot for compound plots (e.g. ggsurvfit + risktable patchwork) that
@@ -61,6 +84,7 @@ save_plot_pptx <- function(slug, plot, title = slug) {
   print(ppt, target = file.path("plots", paste0(slug, ".pptx")))
   plot
 }
+```
 
 ```{r helpers}
 #| include: false
@@ -85,14 +109,15 @@ adjusted_cif <- function(formula, data, exposure = "etoh_hepatitis",
     }
   })
   names(profile) <- covars
-  profile[[exposure]] <- levels(data[[exposure]])
+  # Keep the fitted factor levels; a character column is re-levelled alphabetically and swaps the groups.
+  profile[[exposure]] <- factor(levels(data[[exposure]]), levels = levels(data[[exposure]]))
   newdata <- do.call(expand.grid, c(profile, stringsAsFactors = FALSE))
 
   risk <- riskRegression::predictRisk(fg, newdata = newdata, times = times)
   colnames(risk) <- times
 
   as.data.frame(risk) |>
-    dplyr::mutate(!!exposure := newdata[[exposure]]) |>
+    dplyr::mutate(!!exposure := as.character(newdata[[exposure]])) |>
     tidyr::pivot_longer(-dplyr::all_of(exposure),
                         names_to = "time", values_to = "cif") |>
     dplyr::mutate(time = as.numeric(time))
@@ -107,7 +132,7 @@ plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis",
                        limits = c(0, 90),
                        expand = c(0, 0)) +
     scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-    labs(x = "Days from admission",
+    labs(x = "Days from terlipressin initiation",
          y = "Adjusted CIF  -  Death",
          color = "Alcoholic hepatitis",
          linetype = "Alcoholic hepatitis",
@@ -190,8 +215,8 @@ analysis <- analysis %>%
   mutate(across(all_of(categorical_vars), as.factor),
          across(all_of(numerical_vars),   as.numeric))
 
-create_table_one(
-  all_vars = all_vars,
+tableone_3dp(
+  vars     = all_vars,
   cat_vars = categorical_vars,
   data     = analysis,
   strata   = "etoh_hepatitis",
@@ -211,22 +236,8 @@ analysis_aclf3 <- analysis %>%
 
 cat(sprintf("ACLF grade 3 cohort size: n = %d\n", nrow(analysis_aclf3)))
 
-analysis_aclf3 %>%
-  select(hrs_responders_cat_2, etoh_hepatitis) %>%
-  tbl_summary(
-    by      = etoh_hepatitis,
-    missing = "ifany",
-    label   = list(hrs_responders_cat_2 ~ "HRS overall response")
-  ) %>%
-  add_p() %>%
-  add_overall() %>%
-  modify_caption(
-    "ACLF grade 3 cohort: HRS overall response (hrs_responders_cat_2) by etoh_hepatitis"
-  )
-
-# CSV companion, matching the main Table 1 convention
-create_table_one(
-  all_vars = "hrs_responders_cat_2",
+tableone_3dp(
+  vars     = "hrs_responders_cat_2",
   cat_vars = "hrs_responders_cat_2",
   data     = analysis_aclf3,
   strata   = "etoh_hepatitis",
@@ -252,7 +263,9 @@ fg_unadj <- tidycmprsk::crr(
 )
 
 fg_unadj %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Unadjusted subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
@@ -268,7 +281,7 @@ p_unadj <- ci_unadj %>%
   labs(
     title    = "Unadjusted 90-day cumulative incidence of death",
     subtitle = "AH vs. non-AH",
-    x        = "Days from admission",
+    x        = "Days from terlipressin initiation",
     y        = "Cumulative incidence  -  Death",
     caption  = "Outcome: death (cause 1)  |  Competing risk: liver transplant (cause 2)"
   ) +
@@ -355,7 +368,9 @@ tidycmprsk::crr(
   data     = analysis,
   failcode = "Death"   # competing risk: "Transplant"
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Adjusted (MELD 3.0) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
@@ -398,7 +413,9 @@ tidycmprsk::crr(
   data     = analysis,
   failcode = "Death"   # competing risk: "Transplant"
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Adjusted (ACLF grade) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
@@ -445,7 +462,9 @@ tidycmprsk::crr(
   data     = analysis,
   failcode = "Death"
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Adjusted (MELD 3.0, no hispanic) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
@@ -488,7 +507,9 @@ tidycmprsk::crr(
   data     = analysis,
   failcode = "Death"
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Adjusted (ACLF grade, no hispanic) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
@@ -535,7 +556,9 @@ tidycmprsk::crr(
   data     = analysis,
   failcode = "Death"
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Adjusted (age + admit_meld_3) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
@@ -581,7 +604,9 @@ tidycmprsk::crr(
   data     = analysis,
   failcode = "Death"
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "No-exposure subdistribution hazard ratio (age + admit_meld_3)  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
@@ -600,7 +625,9 @@ Two multivariable binary logistic regression models for overall HRS response (`h
 analysis_lr <- analysis %>%
   mutate(
     hrs_responders_cat_2 = as.numeric(as.character(hrs_responders_cat_2)),
-    aclf_grade           = factor(aclf_grade),
+    # Grade 0 has no non-responders (complete separation), so it is merged into grade 1 as the reference.
+    aclf_grade           = factor(if_else(aclf_grade <= 1, "0-1", as.character(aclf_grade)),
+                                  levels = c("0-1", "2", "3")),
     sex_male             = factor(sex_male),
     etoh_hepatitis       = factor(etoh_hepatitis, levels = c("Non-AH", "AH"))
   )
@@ -609,7 +636,13 @@ analysis_lr <- analysis %>%
 ## Model 1: age + sex_male + etoh_hepatitis + aclf_grade
 
 **Outcome:** `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
-**Predictors:** `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade`.
+**Predictors:** `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade` (0-1, 2, 3; reference = 0-1).
+
+::: {.callout-note}
+## ACLF grade 0 merged into grade 1
+
+In this model, ACLF grades 0 and 1 are combined into a single reference category (ACLF 0-1). Every patient with ACLF grade 0 (n < 11) was an HRS responder, so with grade 0 as its own reference level the model could not estimate the grade 1-3 odds ratios (complete separation; they appeared as OR 0.00 with no confidence interval). The Fine-Gray models are unaffected; they use `aclf_grade` as a continuous term.
+:::
 
 ```{r lr-model1}
 #| code-fold: true
@@ -619,7 +652,9 @@ glm(
   data   = analysis_lr,
   family = binomial()
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Multivariable LR Model 1 (age + sex_male + etoh_hepatitis + aclf_grade)  -  Outcome: hrs_responders_cat_2"
   )
@@ -638,7 +673,9 @@ glm(
   data   = analysis_lr,
   family = binomial()
 ) %>%
-  tbl_regression(exponentiate = TRUE) %>%
+  tbl_regression(exponentiate = TRUE,
+                 estimate_fun = fmt_estimate,
+                 pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
     "Multivariable LR Model 2 (age + etoh_hepatitis + day0_meld)  -  Outcome: hrs_responders_cat_2"
   )

@@ -132,98 +132,50 @@ create_dosechange_day <- function(df) {
 ## -----------------------------------------------------------------------------
 #| label: fn-create-table-one
 #| include: false
-# Custom render for continuous: Median [Q1, Q3]
-render.continuous <- function(x, ...) {
-  with(
-    table1::stats.apply.rounding(table1::stats.default(x, ...), digits = 2),
-    c("", `Median [Q1, Q3]` = sprintf("%s [%s, %s]", MEDIAN, Q1, Q3))
-  )
-}
-
-# P-value function: tracks which test was used via global `test_used`
-pvalue <- function(x, ...) {
-  y <- unlist(x)
-  g <- factor(rep(1:length(x), times = sapply(x, length)))
-  if (is.numeric(y)) {
-    n_groups <- nlevels(droplevels(g))
-    if (n_groups == 2) {
-      p <- tryCatch(wilcox.test(y ~ g)$p.value, error = function(e) NA)
-      test_used <<- c(test_used, "wilcox")
-    } else {
-      p <- tryCatch(kruskal.test(y ~ g)$p.value, error = function(e) NA)
-      test_used <<- c(test_used, "kruskal")
-    }
-  } else {
-    tbl <- table(y, g)
-    if (nrow(tbl) < 2 || ncol(tbl) < 2) {
-      p <- NA
-      test_used <<- c(test_used, "none")
-    } else if (any(tbl < 5)) {
-      p <- tryCatch(fisher.test(tbl)$p.value, error = function(e) NA)
-      test_used <<- c(test_used, "fisher")
-    } else {
-      p <- tryCatch(chisq.test(tbl)$p.value, error = function(e) NA)
-      test_used <<- c(test_used, "chisq")
-    }
-  }
-  pval <- if (is.na(p)) "" else sub("<", "&lt;", format.pval(p, digits = 3, eps = 0.001))
-  c("", pval)
-}
-
-# Initialize global test tracker
-test_used <- character(0)
-
 create_table_one <- function(all_vars, data, strata, output,
-                             cat_vars = NULL, exact = NULL) {
-  data[[strata]] <- factor(data[[strata]])
-
-  if (!is.null(cat_vars)) {
-    for (v in intersect(cat_vars, names(data))) {
-      data[[v]] <- factor(data[[v]])
-    }
+                             cat_vars = NULL, exact = NULL, caption = NULL) {
+  missing_vars <- setdiff(all_vars, names(data))
+  if (length(missing_vars) > 0) {
+    warning("create_table_one(): dropped variables not in `data`: ",
+            paste(missing_vars, collapse = ", "), call. = FALSE)
   }
-
   all_vars <- intersect(all_vars, names(data))
-  f <- as.formula(paste("~", paste(all_vars, collapse = " + "), "|", strata))
+  numerical_vars <- if (is.null(cat_vars)) all_vars else setdiff(all_vars, cat_vars)
 
-  test_used <<- character(0)
-
-  tbl <- table1::table1(f, data = data, overall = "Overall",
-                        render.continuous = render.continuous,
-                        extra.col = list("P-value" = pvalue))
-
-  numerical_vars <- if (!is.null(cat_vars)) setdiff(all_vars, cat_vars) else all_vars
   T1 <- tableone::CreateTableOne(
-    vars = all_vars, strata = strata, data = data,
-    factorVars = cat_vars, addOverall = TRUE, includeNA = FALSE
+    vars       = all_vars,
+    strata     = strata,
+    data       = data,
+    factorVars = cat_vars,
+    addOverall = TRUE,
+    includeNA  = FALSE
   )
-  T1_print <- print(T1, showAllLevels = TRUE, exact = exact,
-                    nonnormal = numerical_vars, missing = TRUE,
-                    quote = FALSE, noSpaces = TRUE, printToggle = FALSE)
+
+  T1_print <- print(
+    T1,
+    showAllLevels = TRUE,
+    exact         = exact,
+    nonnormal     = numerical_vars,
+    missing       = TRUE,
+    quote         = FALSE,
+    noSpaces      = TRUE,
+    printToggle   = FALSE
+  )
+
   write.csv(T1_print, file = output, row.names = TRUE)
 
-  tests <- setdiff(unique(test_used), "none")
-  labels <- c(
-    wilcox  = "Mann-Whitney U test (continuous, 2 groups)",
-    kruskal = "Kruskal-Wallis test (continuous, &ge;3 groups)",
-    fisher  = "Fisher&rsquo;s exact test (categorical, any cell &lt; 5)",
-    chisq   = "Chi-squared test (categorical)"
-  )
-  footnote <- paste(na.omit(labels[tests]), collapse = "; ")
-
-  htmltools::tagList(
-    tbl,
-    htmltools::tags$p(
-      style = "font-size: 0.85em; color: #555; margin-top: 4px;",
-      htmltools::HTML(paste0("Statistical tests: ", footnote))
-    )
-  )
+  # Same matrix as the CSV, rendered as an HTML table when auto-printed.
+  knitr::kable(T1_print, caption = caption)
 }
 
 
 ## -----------------------------------------------------------------------------
 #| label: mean-map
 #| include: false
+# Drop the pre-computed copy from the xlsx so the merge below does not create
+# mean_map_day0.x / mean_map_day0.y.
+master <- master %>% select(-any_of("mean_map_day0"))
+
 map_long <- master %>%
   pivot_longer(
     cols = starts_with("map_terli_day"),

@@ -42,7 +42,7 @@ Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (
 
 Outcome for both: `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
 
-9. **LR Model 1**  -  `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade`
+9. **LR Model 1**  -  `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade` (grades 0-1 merged as the reference; see note on the Analysis page)
 10. **LR Model 2**  -  `age`, `etoh_hepatitis`, `day0_meld`
 
 ## Data Request
