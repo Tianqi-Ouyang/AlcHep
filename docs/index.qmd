@@ -45,6 +45,10 @@ Outcome for both: `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
 9. **LR Model 1**  -  `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade` (grades 0-1 merged as the reference; see note on the Analysis page)
 10. **LR Model 2**  -  `age`, `etoh_hepatitis`, `day0_meld`
 
+### Flow diagram
+
+11. **HRS response and outcomes, AH vs non-AH**  -  one diagram per `etoh_hepatitis` group: `hrs_responders_cat_2`, then death (`time_to_death_status`), RRT at 90 days (`efu_90_rrt`, from the extended follow-up data) and liver transplant (`transplant_lt_status`)
+
 ## Data Request
 
 See `Requests/AlcHep Data Request 04162026.docx` for the current variable list.

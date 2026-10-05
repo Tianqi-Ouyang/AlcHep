@@ -681,3 +681,146 @@ glm(
   )
 ```
 
+# Flow diagram - HRS response in AH vs non-AH
+
+**Cohort:** all patients with known `etoh_hepatitis` (n = 242), drawn as two diagrams: non-AH (`etoh_hepatitis = 0`) and AH (`etoh_hepatitis = 1`).
+
+- **Row 1:** the `etoh_hepatitis` group.
+- **Row 2:** HRS response, `hrs_responders_cat_2` = 0 (non-responders) or 1 (responders).
+- **Row 3:** within each response group, patients who died (`time_to_death_status = 1`), were on RRT at 90 days (`efu_90_rrt = 1`) or received a liver transplant (`transplant_lt_status = 1 or 2`). A patient can be counted in more than one outcome box.
+
+`efu_90_rrt` is not in the master dataset. It comes from the extended follow-up (EFU) site files (09SEP2026 export), joined on a normalized study ID as in the Liver transplant sub-project. It is missing for the 21 CSF patients (CSF has no EFU file) and for patients whose 90-day RRT field was left blank, mostly those who died before day 90. `transplant_lt_status` is coded 0/2, so `= 1 or 2` counts every liver transplant recorded through 1-year follow-up.
+
+```{r flow-efu}
+#| code-fold: true
+#| code-summary: "Show extended follow-up join"
+# EFU writes Yale IDs as YAL-00N while the master uses Yale-N, so join on a normalized ID.
+norm_id <- function(x) {
+  x      <- str_trim(x)
+  prefix <- toupper(str_extract(x, "^[A-Za-z]+"))
+  prefix <- if_else(prefix == "YAL", "YALE", prefix)
+  paste0(prefix, "-", as.integer(str_extract(x, "[0-9]+$")))
+}
+
+efu <- list.files(
+  "/Users/to909/Partners HealthCare Dropbox/Tianqi Ouyang/Extended Data Collection/Finalized Files/09SEP2026",
+  pattern = "_09092026\\.csv$", full.names = TRUE
+) %>%
+  map_dfr(~ read_csv(.x, col_types = cols(.default = col_character()), show_col_types = FALSE)) %>%
+  transmute(id_key = norm_id(subjectid), efu_90_rrt = as.integer(efu_90_rrt))
+stopifnot(!anyDuplicated(efu$id_key))
+
+analysis_flow <- analysis %>%
+  mutate(id_key = norm_id(subjectid)) %>%
+  left_join(efu, by = "id_key")
+
+tibble(
+  `Cohort patients`     = nrow(analysis_flow),
+  `With an EFU record`  = sum(analysis_flow$id_key %in% efu$id_key),
+  `efu_90_rrt recorded` = sum(!is.na(analysis_flow$efu_90_rrt))
+) %>%
+  knitr::kable(caption = "Extended follow-up (EFU) join")
+```
+
+```{r flow-helpers}
+#| code-fold: true
+#| code-summary: "Show flow-diagram code"
+flow_counts <- function(df) {
+  df %>%
+    group_by(resp = as.character(hrs_responders_cat_2)) %>%
+    summarise(
+      n          = n(),
+      death      = sum(time_to_death_status == 1),
+      rrt90      = sum(efu_90_rrt == 1, na.rm = TRUE),
+      rrt90_miss = sum(is.na(efu_90_rrt)),
+      lt         = sum(transplant_lt_status %in% c(1, 2)),
+      .groups    = "drop"
+    )
+}
+
+# Boxes and arrows on a fixed 120 x 62 canvas; the three outcome boxes sit under each response box.
+plot_flow <- function(counts, group_label, group_detail) {
+  resp_x   <- c(`0` = 29, `1` = 91)
+  child_dx <- c(-19.5, 0, 19.5)
+  child_x  <- rep(unname(resp_x), each = 3) + child_dx
+
+  boxes <- bind_rows(
+    tibble(x = 60, y = 56, w = 46, h = 11, big = TRUE,
+           title = group_label, detail = group_detail, count = paste0("n = ", sum(counts$n))),
+    counts %>%
+      transmute(x = resp_x[resp], y = 34, w = 46, h = 11, big = TRUE,
+                title  = if_else(resp == "1", "Responders", "Non-responders"),
+                detail = paste0("hrs_responders_cat_2 = ", resp),
+                count  = paste0("n = ", n)),
+    counts %>%
+      mutate(px = resp_x[resp]) %>%
+      reframe(
+        x = px + child_dx, y = 9, w = 18.5, h = 16, big = FALSE,
+        title  = c("Death", "RRT at 90 days", "Liver transplant"),
+        detail = c("time_to_death_status = 1", "efu_90_rrt = 1", "transplant_lt_status\n= 1 or 2"),
+        count  = c(paste0("n = ", death),
+                   paste0("n = ", rrt90, "\n(missing: ", rrt90_miss, ")"),
+                   paste0("n = ", lt)),
+        .by = resp
+      )
+  )
+  arrows <- bind_rows(
+    tibble(x = 60 + c(-9, 9), y = 50.5, xend = unname(resp_x), yend = 39.5),
+    tibble(x = child_x, y = 28.5, xend = child_x, yend = 17)
+  )
+
+  ggplot() +
+    geom_segment(data = arrows, aes(x = x, y = y, xend = xend, yend = yend),
+                 colour = "#256f9c", linewidth = 0.6,
+                 arrow = arrow(length = unit(2.2, "mm"), type = "closed")) +
+    geom_rect(data = boxes, aes(xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2),
+              fill = "white", colour = "#4f9a3a", linewidth = 0.9) +
+    geom_text(data = boxes, aes(x = x, y = y + h * 0.28, label = title, size = if_else(big, 4.2, 3.6)),
+              fontface = "bold") +
+    geom_text(data = boxes, aes(x = x, y = y + h * 0.02, label = detail, size = if_else(big, 3.1, 2.7)),
+              colour = "grey30", lineheight = 0.9) +
+    geom_text(data = boxes, aes(x = x, y = y - h * 0.28, label = count, size = if_else(big, 4.0, 3.5)),
+              lineheight = 0.9) +
+    scale_size_identity() +
+    coord_cartesian(xlim = c(-1.5, 121.5), ylim = c(0, 62), expand = FALSE) +
+    labs(caption = "Outcome boxes can overlap. RRT at 90 days is from the extended follow-up data (missing = no EFU record or field left blank).") +
+    theme_void() +
+    theme(plot.caption = element_text(face = "italic", size = 9, colour = "grey30", hjust = 0.5),
+          plot.margin  = margin(4, 4, 4, 4))
+}
+```
+
+## Non-alcoholic hepatitis (etoh_hepatitis = 0)
+
+```{r flow-nonah}
+#| code-fold: true
+#| code-summary: "Show non-AH flow diagram"
+#| fig-width: 10
+#| fig-height: 5.8
+save_plot_pptx(
+  "flow_non_ah",
+  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == "Non-AH")),
+            "Non-alcoholic hepatitis", "etoh_hepatitis = 0"),
+  "Flow diagram: non-alcoholic hepatitis (etoh_hepatitis = 0)"
+)
+```
+
+[Download this plot as PowerPoint](plots/flow_non_ah.pptx)
+
+## Alcoholic hepatitis (etoh_hepatitis = 1)
+
+```{r flow-ah}
+#| code-fold: true
+#| code-summary: "Show AH flow diagram"
+#| fig-width: 10
+#| fig-height: 5.8
+save_plot_pptx(
+  "flow_ah",
+  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == "AH")),
+            "Alcoholic hepatitis", "etoh_hepatitis = 1"),
+  "Flow diagram: alcoholic hepatitis (etoh_hepatitis = 1)"
+)
+```
+
+[Download this plot as PowerPoint](plots/flow_ah.pptx)
+
