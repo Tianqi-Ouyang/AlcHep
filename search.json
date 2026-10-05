@@ -91,6 +91,20 @@
     "text": "Model 2: age + etoh_hepatitis + day0_meld\nOutcome: hrs_responders_cat_2 (1 = responder, 0 = non-responder). Predictors: age, etoh_hepatitis, day0_meld.\n\n\nShow LR Model 2\nglm(\n  hrs_responders_cat_2 ~ age + etoh_hepatitis + day0_meld,\n  data   = analysis_lr,\n  family = binomial()\n) %&gt;%\n  tbl_regression(exponentiate = TRUE,\n                 estimate_fun = fmt_estimate,\n                 pvalue_fun   = fmt_pvalue) %&gt;%\n  modify_caption(\n    \"Multivariable LR Model 2 (age + etoh_hepatitis + day0_meld)  -  Outcome: hrs_responders_cat_2\"\n  )\n\n\n\n\n\n\nMultivariable LR Model 2 (age + etoh_hepatitis + day0_meld) - Outcome: hrs_responders_cat_2\n\n\n\n\n\n\n\n\nCharacteristic\nOR1\n95% CI1\np-value\n\n\n\n\nage\n1.00\n0.97, 1.03\n0.803\n\n\netoh_hepatitis\n\n\n\n\n\n\n\n\n    Non-AH\n—\n—\n\n\n\n\n    AH\n0.92\n0.45, 1.86\n0.805\n\n\nday0_meld\n0.96\n0.92, 1.00\n0.059\n\n\n\n1 OR = Odds Ratio, CI = Confidence Interval"
   },
   {
+    "objectID": "analysis.html#non-alcoholic-hepatitis-etoh_hepatitis-0",
+    "href": "analysis.html#non-alcoholic-hepatitis-etoh_hepatitis-0",
+    "title": "AlcHep - Analysis",
+    "section": "Non-alcoholic hepatitis (etoh_hepatitis = 0)",
+    "text": "Non-alcoholic hepatitis (etoh_hepatitis = 0)\n\n\nShow non-AH flow diagram\nsave_plot_pptx(\n  \"flow_non_ah\",\n  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == \"Non-AH\")),\n            \"Non-alcoholic hepatitis\", \"etoh_hepatitis = 0\"),\n  \"Flow diagram: non-alcoholic hepatitis (etoh_hepatitis = 0)\"\n)\n\n\n\n\n\n\n\n\n\nDownload this plot as PowerPoint"
+  },
+  {
+    "objectID": "analysis.html#alcoholic-hepatitis-etoh_hepatitis-1",
+    "href": "analysis.html#alcoholic-hepatitis-etoh_hepatitis-1",
+    "title": "AlcHep - Analysis",
+    "section": "Alcoholic hepatitis (etoh_hepatitis = 1)",
+    "text": "Alcoholic hepatitis (etoh_hepatitis = 1)\n\n\nShow AH flow diagram\nsave_plot_pptx(\n  \"flow_ah\",\n  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == \"AH\")),\n            \"Alcoholic hepatitis\", \"etoh_hepatitis = 1\"),\n  \"Flow diagram: alcoholic hepatitis (etoh_hepatitis = 1)\"\n)\n\n\n\n\n\n\n\n\n\nDownload this plot as PowerPoint"
+  },
+  {
     "objectID": "derived_variables.html",
     "href": "derived_variables.html",
     "title": "Derived Variables",
@@ -291,7 +305,7 @@
     "href": "index.html#analyses",
     "title": "AlcHep - Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin",
     "section": "Analyses",
-    "text": "Analyses\n\nTable 1 - Demographics and clinical characteristics stratified by etoh_hepatitis\n\nSubgroup: ACLF grade 3 only - hrs_responders_cat_2 by etoh_hepatitis\n\nUnadjusted Fine-Gray - 90-day cumulative incidence of mortality (AH vs. non-AH)\nAdjusted Fine-Gray (MELD 3.0) - covariates: age, sex_male, hispanic, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF) - covariates: age, sex_male, hispanic, aclf_grade, etoh_hepatitis\n\n\nModels without hispanic\n\nAdjusted Fine-Gray (MELD 3.0, no hispanic) - covariates: age, sex_male, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF, no hispanic) - covariates: age, sex_male, aclf_grade, etoh_hepatitis\n\n\n\nMinimal model\n\nAdjusted Fine-Gray (age + admit_meld_3) - covariates: age, admit_meld_3, etoh_hepatitis\n\n\n\nReference model (no exposure)\n\nAdjusted Fine-Gray (age + admit_meld_3, no exposure) - covariates: age, admit_meld_3. No etoh_hepatitis. HR table only (no CIF plot).\n\n\n\nBinary logistic regression (HRS overall response)\nOutcome for both: hrs_responders_cat_2 (1 = responder, 0 = non-responder).\n\nLR Model 1 - age, sex_male, etoh_hepatitis, aclf_grade (grades 0-1 merged as the reference; see note on the Analysis page)\nLR Model 2 - age, etoh_hepatitis, day0_meld"
+    "text": "Analyses\n\nTable 1 - Demographics and clinical characteristics stratified by etoh_hepatitis\n\nSubgroup: ACLF grade 3 only - hrs_responders_cat_2 by etoh_hepatitis\n\nUnadjusted Fine-Gray - 90-day cumulative incidence of mortality (AH vs. non-AH)\nAdjusted Fine-Gray (MELD 3.0) - covariates: age, sex_male, hispanic, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF) - covariates: age, sex_male, hispanic, aclf_grade, etoh_hepatitis\n\n\nModels without hispanic\n\nAdjusted Fine-Gray (MELD 3.0, no hispanic) - covariates: age, sex_male, admit_meld_3, etoh_hepatitis\nAdjusted Fine-Gray (ACLF, no hispanic) - covariates: age, sex_male, aclf_grade, etoh_hepatitis\n\n\n\nMinimal model\n\nAdjusted Fine-Gray (age + admit_meld_3) - covariates: age, admit_meld_3, etoh_hepatitis\n\n\n\nReference model (no exposure)\n\nAdjusted Fine-Gray (age + admit_meld_3, no exposure) - covariates: age, admit_meld_3. No etoh_hepatitis. HR table only (no CIF plot).\n\n\n\nBinary logistic regression (HRS overall response)\nOutcome for both: hrs_responders_cat_2 (1 = responder, 0 = non-responder).\n\nLR Model 1 - age, sex_male, etoh_hepatitis, aclf_grade (grades 0-1 merged as the reference; see note on the Analysis page)\nLR Model 2 - age, etoh_hepatitis, day0_meld\n\n\n\nFlow diagram\n\nHRS response and outcomes, AH vs non-AH - one diagram per etoh_hepatitis group: hrs_responders_cat_2, then death (time_to_death_status), RRT at 90 days (efu_90_rrt, from the extended follow-up data) and liver transplant (transplant_lt_status)"
   },
   {
     "objectID": "index.html#data-request",

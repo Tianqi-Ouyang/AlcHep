@@ -133,6 +133,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#minimal-model" id="toc-minimal-model" class="nav-link" data-scroll-target="#minimal-model">Minimal model</a></li>
   <li><a href="#reference-model-no-exposure" id="toc-reference-model-no-exposure" class="nav-link" data-scroll-target="#reference-model-no-exposure">Reference model (no exposure)</a></li>
   <li><a href="#binary-logistic-regression-hrs-overall-response" id="toc-binary-logistic-regression-hrs-overall-response" class="nav-link" data-scroll-target="#binary-logistic-regression-hrs-overall-response">Binary logistic regression (HRS overall response)</a></li>
+  <li><a href="#flow-diagram" id="toc-flow-diagram" class="nav-link" data-scroll-target="#flow-diagram">Flow diagram</a></li>
   </ul></li>
   <li><a href="#data-request" id="toc-data-request" class="nav-link" data-scroll-target="#data-request">Data Request</a></li>
   </ul>
@@ -222,6 +223,12 @@ ul.task-list li input[type="checkbox"] {
 <ol start="9" type="1">
 <li><strong>LR Model 1</strong> - <code>age</code>, <code>sex_male</code>, <code>etoh_hepatitis</code>, <code>aclf_grade</code> (grades 0-1 merged as the reference; see note on the Analysis page)</li>
 <li><strong>LR Model 2</strong> - <code>age</code>, <code>etoh_hepatitis</code>, <code>day0_meld</code></li>
+</ol>
+</section>
+<section id="flow-diagram" class="level3">
+<h3 class="anchored" data-anchor-id="flow-diagram">Flow diagram</h3>
+<ol start="11" type="1">
+<li><strong>HRS response and outcomes, AH vs non-AH</strong> - one diagram per <code>etoh_hepatitis</code> group: <code>hrs_responders_cat_2</code>, then death (<code>time_to_death_status</code>), RRT at 90 days (<code>efu_90_rrt</code>, from the extended follow-up data) and liver transplant (<code>transplant_lt_status</code>)</li>
 </ol>
 </section>
 </section>
