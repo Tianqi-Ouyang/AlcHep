@@ -47,7 +47,7 @@ Outcome for both: `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
 
 ### Flow diagram
 
-11. **HRS response and outcomes, AH vs non-AH**  -  one diagram per `etoh_hepatitis` group: `hrs_responders_cat_2`, then death (`time_to_death_status`), RRT at 90 days (`efu_90_rrt`, from the extended follow-up data) and liver transplant (`transplant_lt_status`)
+11. **HRS response and outcomes, AH vs non-AH**  -  one left-to-right diagram per `etoh_hepatitis` group: `hrs_responders_cat_2`, then RRT during hospitalization (`rrt`), then 90-day outcomes: death (`time_to_death_status`), liver transplant (`transplant_lt_status`) and RRT at 90 days (`efu_90_rrt`, from the extended follow-up data)
 
 ## Data Request
 

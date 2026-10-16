@@ -10,6 +10,16 @@ library(readxl)
 #| include: false
 master <- read_excel("/Users/to909/Desktop/Terlipressin projects/Terlipressin/data/final_master_01282026.xlsx")
 
+# Fix a transposed REDCap export name: the day-1 time-1 MAP reading was exported
+# as `map_terli_time1_day1` instead of `map_terli_day1_time1`. Every other MAP
+# field follows `map_terli_day{N}_time{0-3}`, so the odd one out was invisible to
+# `starts_with("map_terli_day")` and any day-1 MAP average silently used 3 of the
+# 4 readings. Day-0 results are unaffected (bug S4, fixed 2026-10-06).
+if ("map_terli_time1_day1" %in% names(master) &&
+    !"map_terli_day1_time1" %in% names(master)) {
+  master <- master %>% rename(map_terli_day1_time1 = map_terli_time1_day1)
+}
+
 
 ## -----------------------------------------------------------------------------
 #| label: fn-child-pugh

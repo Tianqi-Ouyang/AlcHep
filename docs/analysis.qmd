@@ -683,11 +683,12 @@ glm(
 
 # Flow diagram - HRS response in AH vs non-AH
 
-**Cohort:** all patients with known `etoh_hepatitis` (n = 242), drawn as two diagrams: non-AH (`etoh_hepatitis = 0`) and AH (`etoh_hepatitis = 1`).
+**Cohort:** all patients with known `etoh_hepatitis` (n = 242), drawn as two left-to-right diagrams: non-AH (`etoh_hepatitis = 0`) and AH (`etoh_hepatitis = 1`).
 
-- **Row 1:** the `etoh_hepatitis` group.
-- **Row 2:** HRS response, `hrs_responders_cat_2` = 0 (non-responders) or 1 (responders).
-- **Row 3:** within each response group, patients who died (`time_to_death_status = 1`), were on RRT at 90 days (`efu_90_rrt = 1`) or received a liver transplant (`transplant_lt_status = 1 or 2`). A patient can be counted in more than one outcome box.
+- **Column 1:** the `etoh_hepatitis` group.
+- **Column 2:** HRS response, `hrs_responders_cat_2` = 0 (non-responders) or 1 (responders).
+- **Column 3:** RRT during the index hospitalization: `rrt = 1` (RRT) or `rrt = 0 or 2` (no RRT; 2 = needed RRT but not a candidate).
+- **Column 4 (90-day outcomes):** within each RRT group, patients who died (`time_to_death_status = 1`), received a liver transplant (`transplant_lt_status = 1 or 2`) or were on RRT at 90 days (`efu_90_rrt = 1`). A patient can have more than one outcome.
 
 `efu_90_rrt` is not in the master dataset. It comes from the extended follow-up (EFU) site files (09SEP2026 export), joined on a normalized study ID as in the Liver transplant sub-project. It is missing for the 21 CSF patients (CSF has no EFU file) and for patients whose 90-day RRT field was left blank, mostly those who died before day 90. `transplant_lt_status` is coded 0/2, so `= 1 or 2` counts every liver transplant recorded through 1-year follow-up.
 
@@ -726,67 +727,121 @@ tibble(
 #| code-fold: true
 #| code-summary: "Show flow-diagram code"
 flow_counts <- function(df) {
+  df <- df %>%
+    mutate(
+      resp    = as.character(hrs_responders_cat_2),
+      rrt_grp = case_when(as.numeric(rrt) == 1 ~ "RRT", as.numeric(rrt) %in% c(0, 2) ~ "No RRT")
+    )
+  stopifnot(!anyNA(df$rrt_grp))
   df %>%
-    group_by(resp = as.character(hrs_responders_cat_2)) %>%
+    group_by(resp, rrt_grp) %>%
     summarise(
       n          = n(),
       death      = sum(time_to_death_status == 1),
+      lt         = sum(transplant_lt_status %in% c(1, 2)),
       rrt90      = sum(efu_90_rrt == 1, na.rm = TRUE),
       rrt90_miss = sum(is.na(efu_90_rrt)),
-      lt         = sum(transplant_lt_status %in% c(1, 2)),
       .groups    = "drop"
     )
 }
 
-# Boxes and arrows on a fixed 120 x 62 canvas; the three outcome boxes sit under each response box.
-plot_flow <- function(counts, group_label, group_detail) {
-  resp_x   <- c(`0` = 29, `1` = 91)
-  child_dx <- c(-19.5, 0, 19.5)
-  child_x  <- rep(unname(resp_x), each = 3) + child_dx
+mix_white <- function(col, p) {
+  m <- grDevices::col2rgb(col) * (1 - p) + 255 * p
+  grDevices::rgb(m[1, ], m[2, ], m[3, ], maxColorValue = 255)
+}
 
-  boxes <- bind_rows(
-    tibble(x = 60, y = 56, w = 46, h = 11, big = TRUE,
-           title = group_label, detail = group_detail, count = paste0("n = ", sum(counts$n))),
-    counts %>%
-      transmute(x = resp_x[resp], y = 34, w = 46, h = 11, big = TRUE,
-                title  = if_else(resp == "1", "Responders", "Non-responders"),
-                detail = paste0("hrs_responders_cat_2 = ", resp),
-                count  = paste0("n = ", n)),
-    counts %>%
-      mutate(px = resp_x[resp]) %>%
-      reframe(
-        x = px + child_dx, y = 9, w = 18.5, h = 16, big = FALSE,
-        title  = c("Death", "RRT at 90 days", "Liver transplant"),
-        detail = c("time_to_death_status = 1", "efu_90_rrt = 1", "transplant_lt_status\n= 1 or 2"),
-        count  = c(paste0("n = ", death),
-                   paste0("n = ", rrt90, "\n(missing: ", rrt90_miss, ")"),
-                   paste0("n = ", lt)),
-        .by = resp
-      )
+rounded_box <- function(xmin, xmax, ymin, ymax, r = 1.2, n = 8) {
+  a <- seq(0, pi / 2, length.out = n)
+  tibble(x = c(xmax - r + r * cos(a), xmin + r - r * sin(a), xmin + r - r * cos(a), xmax - r + r * sin(a)),
+         y = c(ymax - r + r * sin(a), ymax - r + r * cos(a), ymin + r - r * sin(a), ymin + r - r * cos(a)))
+}
+
+# Constant-width band whose centre line follows a smoothstep curve from (x0, y0) to (x1, y1).
+ribbon <- function(x0, y0, x1, y1, hw = 2.2, n = 60) {
+  t  <- seq(0, 1, length.out = n)
+  x  <- x0 + (x1 - x0) * t
+  yc <- y0 + (y1 - y0) * (3 * t^2 - 2 * t^3)
+  tibble(x = c(x, rev(x)), y = c(yc + hw, rev(yc - hw)))
+}
+
+# Sized for the 9 x 5.5 in figure, which is also the .pptx placement, so text fits in both.
+plot_flow <- function(counts, root_label) {
+  counts <- counts %>%
+    complete(resp = c("0", "1"), rrt_grp = c("RRT", "No RRT"),
+             fill = list(n = 0L, death = 0L, lt = 0L, rrt90 = 0L, rrt90_miss = 0L))
+  y_leaf <- c(52, 37, 22, 7)
+  y_resp <- c(mean(y_leaf[1:2]), mean(y_leaf[3:4]))
+  y_root <- mean(y_resp)
+
+  leaf <- tibble(resp = c("0", "0", "1", "1"), rrt_grp = c("RRT", "No RRT", "RRT", "No RRT"), y = y_leaf,
+                 fill = c("#f9cfca", "#dbe8f9", "#fcdcc9", "#e0f2db"),
+                 line = c("#d9534a", "#4a83d6", "#e8773a", "#5aa64f")) %>%
+    left_join(counts, by = c("resp", "rrt_grp"))
+  resp_n <- c(sum(counts$n[counts$resp == "0"]), sum(counts$n[counts$resp == "1"]))
+
+  nodes <- bind_rows(
+    tibble(xmin = 1, xmax = 16, y = y_root, h = 13, fill = "#e3e3e3", line = "#666666",
+           title = root_label, count = paste0("(n = ", sum(counts$n), ")"),
+           tsize = 4.3, csize = 4.0, tdy = 2.0, cdy = -2.2),
+    tibble(xmin = 24, xmax = 43, y = y_resp, h = 10, fill = c("#d6e4f7", "#d8eed2"), line = c("#2f5fa8", "#2e7d32"),
+           title = c("Non-responders", "Responders"), count = paste0("(n = ", resp_n, ")"),
+           tsize = 3.9, csize = 3.7, tdy = 1.8, cdy = -2.0),
+    leaf %>% transmute(xmin = 50, xmax = 70, y, h = 10, fill, line,
+                       title = if_else(rrt_grp == "RRT", "RRT during\nhospitalization", "No RRT during\nhospitalization"),
+                       count = paste0("(n = ", n, ")"), tsize = 3.3, csize = 3.3, tdy = 1.4, cdy = -3.0)
   )
-  arrows <- bind_rows(
-    tibble(x = 60 + c(-9, 9), y = 50.5, xend = unname(resp_x), yend = 39.5),
-    tibble(x = child_x, y = 28.5, xend = child_x, yend = 17)
+  outs <- leaf %>% transmute(xmin = 76, xmax = 110, y, h = 12.5,
+                             fill = mix_white(fill, 0.55), line = mix_white(line, 0.35),
+                             death, lt, rrt90, rrt90_miss)
+
+  boxes <- bind_rows(nodes, outs) %>%
+    mutate(id = row_number()) %>%
+    pmap_dfr(function(id, xmin, xmax, y, h, fill, line, ...) {
+      rounded_box(xmin, xmax, y - h / 2, y + h / 2) %>% mutate(id = id, fill = fill, line = line)
+    })
+
+  edges <- bind_rows(
+    tibble(x0 = 15, y0 = y_root + c(3, -3), x1 = 25, y1 = y_resp, col = c("#2f5fa8", "#2e7d32")),
+    tibble(x0 = 42, y0 = rep(y_resp, each = 2) + c(2.7, -2.7, 2.7, -2.7), x1 = 51, y1 = y_leaf, col = leaf$line),
+    tibble(x0 = 69, y0 = y_leaf, x1 = 77, y1 = y_leaf, col = leaf$line)
   )
+  ribbons <- edges %>%
+    mutate(id = row_number()) %>%
+    pmap_dfr(function(x0, y0, x1, y1, col, id) {
+      ribbon(x0, y0, x1, y1) %>% mutate(id = id, fill = mix_white(col, 0.55))
+    })
+
+  # Blue darkened and purple lightened vs the mock-up so they stay distinct with colour-vision deficiency.
+  out_colours <- c("#e5534b", "#1f5fbf", "#c084d8")
+  out_rows <- outs %>%
+    mutate(box = row_number()) %>%
+    reframe(
+      x = xmin, y = y + c(3.4, 0, -3.4), colour = out_colours,
+      label = c(paste0("Death: n = ", death), paste0("Liver transplant: n = ", lt),
+                paste0("RRT at 90 days: n = ", rrt90, " (missing: ", rrt90_miss, ")")),
+      .by = box
+    )
 
   ggplot() +
-    geom_segment(data = arrows, aes(x = x, y = y, xend = xend, yend = yend),
-                 colour = "#256f9c", linewidth = 0.6,
-                 arrow = arrow(length = unit(2.2, "mm"), type = "closed")) +
-    geom_rect(data = boxes, aes(xmin = x - w / 2, xmax = x + w / 2, ymin = y - h / 2, ymax = y + h / 2),
-              fill = "white", colour = "#4f9a3a", linewidth = 0.9) +
-    geom_text(data = boxes, aes(x = x, y = y + h * 0.28, label = title, size = if_else(big, 4.2, 3.6)),
-              fontface = "bold") +
-    geom_text(data = boxes, aes(x = x, y = y + h * 0.02, label = detail, size = if_else(big, 3.1, 2.7)),
-              colour = "grey30", lineheight = 0.9) +
-    geom_text(data = boxes, aes(x = x, y = y - h * 0.28, label = count, size = if_else(big, 4.0, 3.5)),
-              lineheight = 0.9) +
-    scale_size_identity() +
-    coord_cartesian(xlim = c(-1.5, 121.5), ylim = c(0, 62), expand = FALSE) +
-    labs(caption = "Outcome boxes can overlap. RRT at 90 days is from the extended follow-up data (missing = no EFU record or field left blank).") +
+    geom_polygon(data = ribbons, aes(x, y, group = id, fill = fill), colour = NA) +
+    geom_polygon(data = boxes, aes(x, y, group = id, fill = fill, colour = line), linewidth = 0.8) +
+    geom_text(data = nodes, aes(x = (xmin + xmax) / 2, y = y + tdy, label = title, size = tsize),
+              fontface = "bold", lineheight = 0.9, colour = "#1f1f1f") +
+    geom_text(data = nodes, aes(x = (xmin + xmax) / 2, y = y + cdy, label = count, size = csize),
+              colour = "#1f1f1f") +
+    geom_rect(data = out_rows, aes(xmin = x + 1.6, xmax = x + 3.1, ymin = y - 0.75, ymax = y + 0.75, fill = colour)) +
+    geom_text(data = out_rows, aes(x = x + 4.1, y = y, label = label), hjust = 0, size = 3.1, colour = "#262626") +
+    annotate("text", x = 93, y = 61.3, label = "90-day outcomes", fontface = "bold", size = 4.3, colour = "#1f1f1f") +
+    scale_fill_identity() + scale_colour_identity() + scale_size_identity() +
+    coord_fixed(xlim = c(0, 111), ylim = c(0, 64), expand = FALSE) +
+    labs(caption = paste0(
+      "RRT during hospitalization: rrt = 1 (no RRT: rrt = 0 or 2). Death: time_to_death_status = 1. ",
+      "Liver transplant: transplant_lt_status = 1 or 2 (through 1-year follow-up).\n",
+      "RRT at 90 days: efu_90_rrt = 1 from the extended follow-up (missing = no EFU record or field left blank). ",
+      "A patient can have more than one outcome.")) +
     theme_void() +
-    theme(plot.caption = element_text(face = "italic", size = 9, colour = "grey30", hjust = 0.5),
-          plot.margin  = margin(4, 4, 4, 4))
+    theme(plot.caption = element_text(size = 7, colour = "grey30", hjust = 0, lineheight = 1.1),
+          plot.margin  = margin(6, 6, 6, 6))
 }
 ```
 
@@ -795,13 +850,12 @@ plot_flow <- function(counts, group_label, group_detail) {
 ```{r flow-nonah}
 #| code-fold: true
 #| code-summary: "Show non-AH flow diagram"
-#| fig-width: 10
-#| fig-height: 5.8
+#| fig-width: 9
+#| fig-height: 5.5
 save_plot_pptx(
   "flow_non_ah",
-  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == "Non-AH")),
-            "Non-alcoholic hepatitis", "etoh_hepatitis = 0"),
-  "Flow diagram: non-alcoholic hepatitis (etoh_hepatitis = 0)"
+  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == "Non-AH")), "Non-AH"),
+  "Flow diagram: non-AH (etoh_hepatitis = 0)"
 )
 ```
 
@@ -812,13 +866,12 @@ save_plot_pptx(
 ```{r flow-ah}
 #| code-fold: true
 #| code-summary: "Show AH flow diagram"
-#| fig-width: 10
-#| fig-height: 5.8
+#| fig-width: 9
+#| fig-height: 5.5
 save_plot_pptx(
   "flow_ah",
-  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == "AH")),
-            "Alcoholic hepatitis", "etoh_hepatitis = 1"),
-  "Flow diagram: alcoholic hepatitis (etoh_hepatitis = 1)"
+  plot_flow(flow_counts(filter(analysis_flow, etoh_hepatitis == "AH")), "AH"),
+  "Flow diagram: AH (etoh_hepatitis = 1)"
 )
 ```
 
