@@ -40,6 +40,14 @@ source(knitr::purl(
 fmt_estimate <- function(x) gtsummary::style_number(x, digits = 2)
 fmt_pvalue   <- function(x) gtsummary::style_pvalue(x, digits = 3)
 
+# cmprsk's summary() rounds Fine-Gray p-values to 2 significant digits, so recompute the exact Wald p.
+tidy_crr <- function(x, ...) {
+  out <- tidycmprsk::tidy(x, ...)
+  z <- x$cmprsk$coef / sqrt(diag(x$cmprsk$var))
+  out$p.value <- 2 * pnorm(-abs(z[out$term]))
+  out
+}
+
 # Table 1 via tableone with every value at 3 decimals; writes the CSV and returns the same matrix.
 tableone_3dp <- function(vars, cat_vars, data, strata, output) {
   t1 <- tableone::CreateTableOne(
@@ -143,6 +151,9 @@ plot_adjusted_cif <- function(df, exposure = "etoh_hepatitis",
     theme(legend.position = "bottom",
           plot.caption = element_text(face = "italic"))
 }
+
+# ACLF grade as two groups, 0-2 (reference) vs 3, for LR Model 1 and the ACLF-grade Fine-Gray models.
+aclf_0_2_vs_3 <- function(x) factor(if_else(x == 3, "3", "0-2"), levels = c("0-2", "3"))
 ```
 
 ## Analysis Cohort
@@ -264,6 +275,7 @@ fg_unadj <- tidycmprsk::crr(
 
 fg_unadj %>%
   tbl_regression(exponentiate = TRUE,
+                 tidy_fun     = tidy_crr,
                  estimate_fun = fmt_estimate,
                  pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
@@ -314,42 +326,53 @@ save_plot_pptx("unadjusted_cif", p_unadj,
 
 [Download this plot as PowerPoint](plots/unadjusted_cif.pptx)
 
-### 90-day cumulative incidence of death (AH vs. non-AH)
+### 30- and 90-day cumulative incidence of death (AH vs. non-AH)
 
-Non-parametric **Aalen-Johansen** estimator at *t* = 90 days, accounting for liver transplant as a competing risk. 95% CIs use the log-log transformation.
+Non-parametric **Aalen-Johansen** estimator at *t* = 30 and 90 days, accounting for liver transplant as a competing risk. 95% CIs use the log-log transformation. Gray's test compares the AH and non-AH cumulative incidence of death over the 90 days.
 
-```{r ci90-table}
+```{r cif-30-90-table}
 #| code-fold: true
-#| code-summary: "Show 90-day CIF table"
-ci90_raw <- ci_unadj %>%
-  tidy(times = 90) %>%
+#| code-summary: "Show 30- and 90-day CIF table"
+cif_30_90 <- ci_unadj %>%
+  tidy(times = c(30, 90)) %>%
   filter(outcome == "Death")
 
-ci90_raw %>%
+# Gray's test; outcome_1 is death, the first non-censoring level of event_cmp.
+gray <- glance(ci_unadj)
+stopifnot(gray$outcome_1 == "Death")
+gray_p <- gray$p.value_1
+
+cif_30_90 %>%
   transmute(
-    Group              = strata,
-    `CIF at 90d (%)`   = sprintf("%.1f", 100 * estimate),
-    `95% CI (%)`       = sprintf("%.1f - %.1f", 100 * conf.low, 100 * conf.high)
+    Group     = strata,
+    Day       = time,
+    `CIF (%)` = sprintf("%.1f", 100 * estimate),
+    `95% CI`  = sprintf("%.2f, %.2f", conf.low, conf.high)
   ) %>%
   knitr::kable(
-    align   = "lrr",
-    caption = "Aalen-Johansen 90-day cumulative incidence of death (competing risk: liver transplant)."
+    align   = "lrrr",
+    caption = paste0(
+      "Aalen-Johansen cumulative incidence of death (competing risk: liver transplant). ",
+      "Gray's test p = ", fmt_pvalue(gray_p), "."
+    )
   )
 ```
 
-```{r ci90-sentence}
+```{r cif-30-90-sentence}
 #| code-fold: true
 #| code-summary: "Show inline sentence"
 #| results: asis
-ah  <- ci90_raw %>% filter(strata == "AH")
-nah <- ci90_raw %>% filter(strata == "Non-AH")
+# Request format: CIF as XX.X%, 95% CI as proportions (0.XX, 0.XX).
+cif_text <- function(group, day) {
+  r <- filter(cif_30_90, strata == group, time == day)
+  sprintf("%.1f%% (95%% CI %.2f, %.2f)", 100 * r$estimate, r$conf.low, r$conf.high)
+}
 
 cat(glue::glue(
-  "At 90 days the cumulative incidence of death accounting for liver transplant ",
-  "as a competing risk was **{sprintf('%.1f', 100*ah$estimate)}%** in the AH group ",
-  "(95% CI {sprintf('%.1f', 100*ah$conf.low)}-{sprintf('%.1f', 100*ah$conf.high)}) ",
-  "and **{sprintf('%.1f', 100*nah$estimate)}%** in the non-AH group ",
-  "(95% CI {sprintf('%.1f', 100*nah$conf.low)}-{sprintf('%.1f', 100*nah$conf.high)})."
+  "Cumulative incidence of death, AH vs. non-AH: ",
+  "30-day {cif_text('AH', 30)} vs. {cif_text('Non-AH', 30)}; ",
+  "90-day {cif_text('AH', 90)} vs. {cif_text('Non-AH', 90)} ",
+  "(Gray's test p = {fmt_pvalue(gray_p)})."
 ))
 ```
 
@@ -369,6 +392,7 @@ tidycmprsk::crr(
   failcode = "Death"   # competing risk: "Transplant"
 ) %>%
   tbl_regression(exponentiate = TRUE,
+                 tidy_fun     = tidy_crr,
                  estimate_fun = fmt_estimate,
                  pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
@@ -401,23 +425,46 @@ save_plot_pptx(
 ## Adjusted Fine-Gray  -  ACLF grade model
 
 **Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
-&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`.
+&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `hispanic`, `aclf_grade` (0-2 vs 3), `etoh_hepatitis`.
+
+Unadjusted HRs come from a separate Fine-Gray model for each covariate; adjusted HRs come from one model with all covariates.
 
 ```{r fg-aclf}
 #| code-fold: true
-#| code-summary: "Show ACLF-grade adjusted Fine-Gray"
+#| code-summary: "Show ACLF-grade unadjusted and adjusted Fine-Gray"
+# ACLF grades 0-2 form the reference group against grade 3; every ACLF-grade Fine-Gray fit uses this data.
+analysis_aclf <- analysis %>% mutate(aclf_grade = aclf_0_2_vs_3(aclf_grade))
+
 # Outcome of interest = "Death"; competing risk = "Transplant"
-tidycmprsk::crr(
+# Unadjusted: one Fine-Gray model per covariate.
+fg_aclf_unadj <- tbl_uvregression(
+  analysis_aclf,
+  method       = tidycmprsk::crr,
+  y            = "Surv(time_to_death_90days_cmp, event_cmp)",
+  method.args  = list(failcode = "Death"),
+  include      = c(age, sex_male, hispanic, aclf_grade, etoh_hepatitis),
+  exponentiate = TRUE,
+  hide_n       = TRUE,
+  tidy_fun     = tidy_crr,
+  estimate_fun = fmt_estimate,
+  pvalue_fun   = fmt_pvalue
+)
+
+# Adjusted: all covariates in one model.
+fg_aclf_adj <- tidycmprsk::crr(
   Surv(time_to_death_90days_cmp, event_cmp) ~
     age + sex_male + hispanic + aclf_grade + etoh_hepatitis,
-  data     = analysis,
+  data     = analysis_aclf,
   failcode = "Death"   # competing risk: "Transplant"
 ) %>%
   tbl_regression(exponentiate = TRUE,
+                 tidy_fun     = tidy_crr,
                  estimate_fun = fmt_estimate,
-                 pvalue_fun   = fmt_pvalue) %>%
+                 pvalue_fun   = fmt_pvalue)
+
+tbl_merge(list(fg_aclf_unadj, fg_aclf_adj), tab_spanner = c("**Unadjusted**", "**Adjusted**")) %>%
   modify_caption(
-    "Adjusted (ACLF grade) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+    "Unadjusted and adjusted (ACLF grade) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
 ```
 
@@ -427,7 +474,7 @@ tidycmprsk::crr(
 cif_aclf <- adjusted_cif(
   prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
     age + sex_male + hispanic + aclf_grade + etoh_hepatitis,
-  data = analysis
+  data = analysis_aclf
 )
 
 save_plot_pptx(
@@ -463,6 +510,7 @@ tidycmprsk::crr(
   failcode = "Death"
 ) %>%
   tbl_regression(exponentiate = TRUE,
+                 tidy_fun     = tidy_crr,
                  estimate_fun = fmt_estimate,
                  pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
@@ -495,23 +543,43 @@ save_plot_pptx(
 ## Adjusted Fine-Gray  -  ACLF grade model (no hispanic)
 
 **Outcome:** death within 90 days (cause 1) &nbsp;|&nbsp; **Competing risk:** liver transplant (cause 2)
-&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `aclf_grade`, `etoh_hepatitis`.
+&nbsp;|&nbsp; **Covariates:** `age`, `sex_male`, `aclf_grade` (0-2 vs 3), `etoh_hepatitis`.
+
+Unadjusted HRs come from a separate Fine-Gray model for each covariate; adjusted HRs come from one model with all covariates.
 
 ```{r fg-aclf-nohisp}
 #| code-fold: true
-#| code-summary: "Show ACLF-grade adjusted Fine-Gray (no hispanic)"
+#| code-summary: "Show ACLF-grade unadjusted and adjusted Fine-Gray (no hispanic)"
 # Outcome of interest = "Death"; competing risk = "Transplant"
-tidycmprsk::crr(
+# Unadjusted: one Fine-Gray model per covariate.
+fg_aclf_nohisp_unadj <- tbl_uvregression(
+  analysis_aclf,
+  method       = tidycmprsk::crr,
+  y            = "Surv(time_to_death_90days_cmp, event_cmp)",
+  method.args  = list(failcode = "Death"),
+  include      = c(age, sex_male, aclf_grade, etoh_hepatitis),
+  exponentiate = TRUE,
+  hide_n       = TRUE,
+  tidy_fun     = tidy_crr,
+  estimate_fun = fmt_estimate,
+  pvalue_fun   = fmt_pvalue
+)
+
+# Adjusted: all covariates in one model.
+fg_aclf_nohisp_adj <- tidycmprsk::crr(
   Surv(time_to_death_90days_cmp, event_cmp) ~
     age + sex_male + aclf_grade + etoh_hepatitis,
-  data     = analysis,
+  data     = analysis_aclf,
   failcode = "Death"
 ) %>%
   tbl_regression(exponentiate = TRUE,
+                 tidy_fun     = tidy_crr,
                  estimate_fun = fmt_estimate,
-                 pvalue_fun   = fmt_pvalue) %>%
+                 pvalue_fun   = fmt_pvalue)
+
+tbl_merge(list(fg_aclf_nohisp_unadj, fg_aclf_nohisp_adj), tab_spanner = c("**Unadjusted**", "**Adjusted**")) %>%
   modify_caption(
-    "Adjusted (ACLF grade, no hispanic) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
+    "Unadjusted and adjusted (ACLF grade, no hispanic) subdistribution hazard ratio  -  Outcome: death (cause 1); Competing risk: liver transplant (cause 2)"
   )
 ```
 
@@ -521,7 +589,7 @@ tidycmprsk::crr(
 cif_aclf_nohisp <- adjusted_cif(
   prodlim::Hist(time_to_death_90days_cmp, time_to_death_status_90days_cmp) ~
     age + sex_male + aclf_grade + etoh_hepatitis,
-  data = analysis
+  data = analysis_aclf
 )
 
 save_plot_pptx(
@@ -557,6 +625,7 @@ tidycmprsk::crr(
   failcode = "Death"
 ) %>%
   tbl_regression(exponentiate = TRUE,
+                 tidy_fun     = tidy_crr,
                  estimate_fun = fmt_estimate,
                  pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
@@ -605,6 +674,7 @@ tidycmprsk::crr(
   failcode = "Death"
 ) %>%
   tbl_regression(exponentiate = TRUE,
+                 tidy_fun     = tidy_crr,
                  estimate_fun = fmt_estimate,
                  pvalue_fun   = fmt_pvalue) %>%
   modify_caption(
@@ -625,9 +695,7 @@ Two multivariable binary logistic regression models for overall HRS response (`h
 analysis_lr <- analysis %>%
   mutate(
     hrs_responders_cat_2 = as.numeric(as.character(hrs_responders_cat_2)),
-    # Grade 0 has no non-responders (complete separation), so it is merged into grade 1 as the reference.
-    aclf_grade           = factor(if_else(aclf_grade <= 1, "0-1", as.character(aclf_grade)),
-                                  levels = c("0-1", "2", "3")),
+    aclf_grade           = aclf_0_2_vs_3(aclf_grade),   # 0-2 (reference) vs 3
     sex_male             = factor(sex_male),
     etoh_hepatitis       = factor(etoh_hepatitis, levels = c("Non-AH", "AH"))
   )
@@ -636,12 +704,12 @@ analysis_lr <- analysis %>%
 ## Model 1: age + sex_male + etoh_hepatitis + aclf_grade
 
 **Outcome:** `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
-**Predictors:** `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade` (0-1, 2, 3; reference = 0-1).
+**Predictors:** `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade` (0-2, 3; reference = 0-2).
 
 ::: {.callout-note}
-## ACLF grade 0 merged into grade 1
+## ACLF grades 0-2 merged as the reference
 
-In this model, ACLF grades 0 and 1 are combined into a single reference category (ACLF 0-1). Every patient with ACLF grade 0 (n < 11) was an HRS responder, so with grade 0 as its own reference level the model could not estimate the grade 1-3 odds ratios (complete separation; they appeared as OR 0.00 with no confidence interval). The Fine-Gray models are unaffected; they use `aclf_grade` as a continuous term.
+ACLF grades 0, 1 and 2 are combined into one reference category (ACLF 0-2), so `aclf_grade` has two rows: 0-2 (reference) and 3. The two ACLF-grade Fine-Gray models use the same grouping.
 :::
 
 ```{r lr-model1}

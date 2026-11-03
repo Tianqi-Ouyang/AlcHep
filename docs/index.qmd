@@ -21,14 +21,14 @@ Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (
 
 1. **Table 1**  -  Demographics and clinical characteristics stratified by `etoh_hepatitis`
    - **Subgroup:** ACLF grade 3 only - `hrs_responders_cat_2` by `etoh_hepatitis`
-2. **Unadjusted Fine-Gray**  -  90-day cumulative incidence of mortality (AH vs. non-AH)
+2. **Unadjusted Fine-Gray**  -  90-day cumulative incidence of mortality (AH vs. non-AH), with 30- and 90-day estimates and Gray's test
 3. **Adjusted Fine-Gray (MELD 3.0)**  -  covariates: `age`, `sex_male`, `hispanic`, `admit_meld_3`, `etoh_hepatitis`
-4. **Adjusted Fine-Gray (ACLF)**  -  covariates: `age`, `sex_male`, `hispanic`, `aclf_grade`, `etoh_hepatitis`
+4. **Adjusted Fine-Gray (ACLF)**  -  covariates: `age`, `sex_male`, `hispanic`, `aclf_grade` (0-2 vs 3), `etoh_hepatitis`; unadjusted and adjusted HRs side by side
 
 ### Models without `hispanic`
 
 5. **Adjusted Fine-Gray (MELD 3.0, no hispanic)**  -  covariates: `age`, `sex_male`, `admit_meld_3`, `etoh_hepatitis`
-6. **Adjusted Fine-Gray (ACLF, no hispanic)**  -  covariates: `age`, `sex_male`, `aclf_grade`, `etoh_hepatitis`
+6. **Adjusted Fine-Gray (ACLF, no hispanic)**  -  covariates: `age`, `sex_male`, `aclf_grade` (0-2 vs 3), `etoh_hepatitis`; unadjusted and adjusted HRs side by side
 
 ### Minimal model
 
@@ -42,7 +42,7 @@ Sub-project of the HARMONY Terlipressin Registry. Compares alcoholic-hepatitis (
 
 Outcome for both: `hrs_responders_cat_2` (1 = responder, 0 = non-responder).
 
-9. **LR Model 1**  -  `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade` (grades 0-1 merged as the reference; see note on the Analysis page)
+9. **LR Model 1**  -  `age`, `sex_male`, `etoh_hepatitis`, `aclf_grade` (grades 0-2 merged as the reference vs grade 3; see note on the Analysis page)
 10. **LR Model 2**  -  `age`, `etoh_hepatitis`, `day0_meld`
 
 ### Flow diagram
