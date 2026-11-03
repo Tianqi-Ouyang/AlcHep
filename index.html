@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-10-16">
+<meta name="dcterms.date" content="2026-11-03">
 
 <title>AlcHep - Alcoholic Hepatitis in HRS-AKI Treated with Terlipressin – Terlipressin — AlcHep</title>
 <style>
@@ -155,7 +155,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">October 16, 2026</p>
+      <p class="date">November 3, 2026</p>
     </div>
   </div>
   
@@ -194,15 +194,15 @@ ul.task-list li input[type="checkbox"] {
 <ul>
 <li><strong>Subgroup:</strong> ACLF grade 3 only - <code>hrs_responders_cat_2</code> by <code>etoh_hepatitis</code></li>
 </ul></li>
-<li><strong>Unadjusted Fine-Gray</strong> - 90-day cumulative incidence of mortality (AH vs.&nbsp;non-AH)</li>
+<li><strong>Unadjusted Fine-Gray</strong> - 90-day cumulative incidence of mortality (AH vs.&nbsp;non-AH), with 30- and 90-day estimates and Gray’s test</li>
 <li><strong>Adjusted Fine-Gray (MELD 3.0)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>hispanic</code>, <code>admit_meld_3</code>, <code>etoh_hepatitis</code></li>
-<li><strong>Adjusted Fine-Gray (ACLF)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>hispanic</code>, <code>aclf_grade</code>, <code>etoh_hepatitis</code></li>
+<li><strong>Adjusted Fine-Gray (ACLF)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>hispanic</code>, <code>aclf_grade</code> (0-2 vs 3), <code>etoh_hepatitis</code>; unadjusted and adjusted HRs side by side</li>
 </ol>
 <section id="models-without-hispanic" class="level3">
 <h3 class="anchored" data-anchor-id="models-without-hispanic">Models without <code>hispanic</code></h3>
 <ol start="5" type="1">
 <li><strong>Adjusted Fine-Gray (MELD 3.0, no hispanic)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>admit_meld_3</code>, <code>etoh_hepatitis</code></li>
-<li><strong>Adjusted Fine-Gray (ACLF, no hispanic)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>aclf_grade</code>, <code>etoh_hepatitis</code></li>
+<li><strong>Adjusted Fine-Gray (ACLF, no hispanic)</strong> - covariates: <code>age</code>, <code>sex_male</code>, <code>aclf_grade</code> (0-2 vs 3), <code>etoh_hepatitis</code>; unadjusted and adjusted HRs side by side</li>
 </ol>
 </section>
 <section id="minimal-model" class="level3">
@@ -221,7 +221,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="binary-logistic-regression-hrs-overall-response">Binary logistic regression (HRS overall response)</h3>
 <p>Outcome for both: <code>hrs_responders_cat_2</code> (1 = responder, 0 = non-responder).</p>
 <ol start="9" type="1">
-<li><strong>LR Model 1</strong> - <code>age</code>, <code>sex_male</code>, <code>etoh_hepatitis</code>, <code>aclf_grade</code> (grades 0-1 merged as the reference; see note on the Analysis page)</li>
+<li><strong>LR Model 1</strong> - <code>age</code>, <code>sex_male</code>, <code>etoh_hepatitis</code>, <code>aclf_grade</code> (grades 0-2 merged as the reference vs grade 3; see note on the Analysis page)</li>
 <li><strong>LR Model 2</strong> - <code>age</code>, <code>etoh_hepatitis</code>, <code>day0_meld</code></li>
 </ol>
 </section>
