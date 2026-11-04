@@ -17,7 +17,7 @@ Shared context (master dataset path, derived variables, conventions) lives in th
 ## Data Sources
 
 - Master dataset via the shared pipeline (parent `CLAUDE.md`).
-- `efu_90_rrt` (flow diagram) is only in the extended follow-up (EFU) site files: `/Users/to909/Partners HealthCare Dropbox/Tianqi Ouyang/Extended Data Collection/Finalized Files/09SEP2026/*_09092026.csv`. Join on a normalized study ID (`YAL` -> `YALE`), the same as the Liver transplant sub-project; CSF has no EFU file. Never commit EFU or other patient-level files (the repo is public).
+- `efu_rrt` (flow diagram) is only in the extended follow-up (EFU) site files: `/Users/to909/Partners HealthCare Dropbox/Tianqi Ouyang/Extended Data Collection/Finalized Files/09SEP2026/*_09092026.csv`. Join on a normalized study ID (`YAL` -> `YALE`), the same as the Liver transplant sub-project; CSF has no EFU file. Never commit EFU or other patient-level files (the repo is public).
 
 ## Repository Layout
 

@@ -756,9 +756,9 @@ glm(
 - **Column 1:** the `etoh_hepatitis` group.
 - **Column 2:** HRS response, `hrs_responders_cat_2` = 0 (non-responders) or 1 (responders).
 - **Column 3:** RRT during the index hospitalization: `rrt = 1` (RRT) or `rrt = 0 or 2` (no RRT; 2 = needed RRT but not a candidate).
-- **Column 4 (90-day outcomes):** within each RRT group, patients who died (`time_to_death_status = 1`), received a liver transplant (`transplant_lt_status = 1 or 2`) or were on RRT at 90 days (`efu_90_rrt = 1`). A patient can have more than one outcome.
+- **Column 4 (outcomes):** within each RRT group, patients who died (`time_to_death_status = 1`), received a liver transplant (`transplant_lt_status = 1 or 2`) or started RRT after the index discharge (`efu_rrt = 1`). A patient can have more than one outcome.
 
-`efu_90_rrt` is not in the master dataset. It comes from the extended follow-up (EFU) site files (09SEP2026 export), joined on a normalized study ID as in the Liver transplant sub-project. It is missing for the 21 CSF patients (CSF has no EFU file) and for patients whose 90-day RRT field was left blank, mostly those who died before day 90. `transplant_lt_status` is coded 0/2, so `= 1 or 2` counts every liver transplant recorded through 1-year follow-up.
+`efu_rrt` ("Was Renal Replacement Therapy (RRT) initiated after index discharge?") is not in the master dataset. It comes from the extended follow-up (EFU) site files (09SEP2026 export), joined on a normalized study ID as in the Liver transplant sub-project. The field has no 90-day limit. It is missing for the 21 CSF patients (CSF has no EFU file) and for patients whose `efu_rrt` field was left blank. `transplant_lt_status` is coded 0/2, so `= 1 or 2` counts every liver transplant recorded through 1-year follow-up.
 
 ```{r flow-efu}
 #| code-fold: true
@@ -776,7 +776,7 @@ efu <- list.files(
   pattern = "_09092026\\.csv$", full.names = TRUE
 ) %>%
   map_dfr(~ read_csv(.x, col_types = cols(.default = col_character()), show_col_types = FALSE)) %>%
-  transmute(id_key = norm_id(subjectid), efu_90_rrt = as.integer(efu_90_rrt))
+  transmute(id_key = norm_id(subjectid), efu_rrt = as.integer(efu_rrt))
 stopifnot(!anyDuplicated(efu$id_key))
 
 analysis_flow <- analysis %>%
@@ -784,9 +784,9 @@ analysis_flow <- analysis %>%
   left_join(efu, by = "id_key")
 
 tibble(
-  `Cohort patients`     = nrow(analysis_flow),
-  `With an EFU record`  = sum(analysis_flow$id_key %in% efu$id_key),
-  `efu_90_rrt recorded` = sum(!is.na(analysis_flow$efu_90_rrt))
+  `Cohort patients`    = nrow(analysis_flow),
+  `With an EFU record` = sum(analysis_flow$id_key %in% efu$id_key),
+  `efu_rrt recorded`   = sum(!is.na(analysis_flow$efu_rrt))
 ) %>%
   knitr::kable(caption = "Extended follow-up (EFU) join")
 ```
@@ -804,12 +804,12 @@ flow_counts <- function(df) {
   df %>%
     group_by(resp, rrt_grp) %>%
     summarise(
-      n          = n(),
-      death      = sum(time_to_death_status == 1),
-      lt         = sum(transplant_lt_status %in% c(1, 2)),
-      rrt90      = sum(efu_90_rrt == 1, na.rm = TRUE),
-      rrt90_miss = sum(is.na(efu_90_rrt)),
-      .groups    = "drop"
+      n             = n(),
+      death         = sum(time_to_death_status == 1),
+      lt            = sum(transplant_lt_status %in% c(1, 2)),
+      rrt_post      = sum(efu_rrt == 1, na.rm = TRUE),
+      rrt_post_miss = sum(is.na(efu_rrt)),
+      .groups       = "drop"
     )
 }
 
@@ -836,7 +836,7 @@ ribbon <- function(x0, y0, x1, y1, hw = 2.2, n = 60) {
 plot_flow <- function(counts, root_label) {
   counts <- counts %>%
     complete(resp = c("0", "1"), rrt_grp = c("RRT", "No RRT"),
-             fill = list(n = 0L, death = 0L, lt = 0L, rrt90 = 0L, rrt90_miss = 0L))
+             fill = list(n = 0L, death = 0L, lt = 0L, rrt_post = 0L, rrt_post_miss = 0L))
   y_leaf <- c(52, 37, 22, 7)
   y_resp <- c(mean(y_leaf[1:2]), mean(y_leaf[3:4]))
   y_root <- mean(y_resp)
@@ -860,7 +860,7 @@ plot_flow <- function(counts, root_label) {
   )
   outs <- leaf %>% transmute(xmin = 76, xmax = 110, y, h = 12.5,
                              fill = mix_white(fill, 0.55), line = mix_white(line, 0.35),
-                             death, lt, rrt90, rrt90_miss)
+                             death, lt, rrt_post, rrt_post_miss)
 
   boxes <- bind_rows(nodes, outs) %>%
     mutate(id = row_number()) %>%
@@ -886,7 +886,7 @@ plot_flow <- function(counts, root_label) {
     reframe(
       x = xmin, y = y + c(3.4, 0, -3.4), colour = out_colours,
       label = c(paste0("Death: n = ", death), paste0("Liver transplant: n = ", lt),
-                paste0("RRT at 90 days: n = ", rrt90, " (missing: ", rrt90_miss, ")")),
+                paste0("RRT after discharge: n = ", rrt_post, " (missing: ", rrt_post_miss, ")")),
       .by = box
     )
 
@@ -899,13 +899,13 @@ plot_flow <- function(counts, root_label) {
               colour = "#1f1f1f") +
     geom_rect(data = out_rows, aes(xmin = x + 1.6, xmax = x + 3.1, ymin = y - 0.75, ymax = y + 0.75, fill = colour)) +
     geom_text(data = out_rows, aes(x = x + 4.1, y = y, label = label), hjust = 0, size = 3.1, colour = "#262626") +
-    annotate("text", x = 93, y = 61.3, label = "90-day outcomes", fontface = "bold", size = 4.3, colour = "#1f1f1f") +
+    annotate("text", x = 93, y = 61.3, label = "Outcomes", fontface = "bold", size = 4.3, colour = "#1f1f1f") +
     scale_fill_identity() + scale_colour_identity() + scale_size_identity() +
     coord_fixed(xlim = c(0, 111), ylim = c(0, 64), expand = FALSE) +
     labs(caption = paste0(
       "RRT during hospitalization: rrt = 1 (no RRT: rrt = 0 or 2). Death: time_to_death_status = 1. ",
       "Liver transplant: transplant_lt_status = 1 or 2 (through 1-year follow-up).\n",
-      "RRT at 90 days: efu_90_rrt = 1 from the extended follow-up (missing = no EFU record or field left blank). ",
+      "RRT after discharge: efu_rrt = 1, started after the index discharge (missing = no EFU record or field left blank). ",
       "A patient can have more than one outcome.")) +
     theme_void() +
     theme(plot.caption = element_text(size = 7, colour = "grey30", hjust = 0, lineheight = 1.1),
